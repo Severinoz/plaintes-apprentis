@@ -326,7 +326,7 @@ const PB=[
  {g:"MAR",d:"",s:[["MAR absent",""],["MAR injoignable",""],["MAR qui ne fait pas son travail de suivi",""],["MAR qui ne forme pas l'apprenti",""],["MAR au comportement déplacé envers l'apprenti",""],["MAR non attribué ou inconnu","A"],[AUTRE,""]]},
  {g:"Paiement",d:"U",s:[["Apprenti non payé",""],["Apprenti payé en partie",""],["Retard de paiement",""],["Erreur sur le montant",""],["Problème de numéro ou de compte Orange Money",""],["Paiement en espèces demandé",""],["Paiement envoyé à un autre numéro",""],[AUTRE,""]]},
  {g:"Contrat",d:"U",s:[["Contrat pas encore signé par l'apprenti",""],["Contrat pas encore signé par l'UE",""],["Contrat introuvable ou non remis",""],["Contrat à modifier après changement d'UE",""],["Erreur dans le contrat (nom, métier, montant)",""],[AUTRE,""]]},
- {g:"Carte ou badge",d:"A",s:[["Apprenti sans carte",""],["Carte pas encore distribuée",""],["Erreur sur la carte (nom, photo)",""],["Carte perdue ou détériorée",""],[AUTRE,""]]},
+ {g:"Badge",d:"A",s:[["Apprenti sans carte",""],["Carte pas encore distribuée",""],["Erreur sur la carte (nom, photo)",""],["Carte perdue ou détériorée",""],[AUTRE,""]]},
  {g:"Affectation",d:"A",s:[["Erreur d'affectation",""],["Apprenti pas encore affecté",""],["Affectation trop éloignée du domicile",""],["Changement d'UE demandé",""],["Changement de centre demandé",""],[AUTRE,""]]},
  {g:"Données de l'apprenti",d:"A",s:[["Nom erroné ou mal écrit",""],["Numéro de téléphone erroné",""],["Apprenti absent de la base",""],["Doublon dans la base",""],[AUTRE,""]]},
  {g:"Conseiller de suivi",d:"",s:[["Conseiller absent ou injoignable",""],["Suivi non effectué",""],["Comportement déplacé",""],[AUTRE,""]]},
@@ -334,7 +334,7 @@ const PB=[
  {g:"Mauvais traitement ou discrimination",d:"",s:[["Mauvais traitement",""],["Harcèlement ou violence",""],["Discrimination",""],[AUTRE,""]]},
  {g:AUTRE,d:"",s:[]}
 ];
-const LEG={"Paiement":[["Paiement"]],"Distance apprenti-UE":[["UE","Distance entre l'apprenti et l'UE"]],"UE introuvable ou non outillée":[["UE"]],"Erreur d'affectation":[["Affectation","Erreur d'affectation"]],"Problème avec l'UE":[["UE"]],"Problème avec le MAR":[["MAR"]],"Problème avec le conseiller":[["Conseiller de suivi"]],"Carte ou contrat":[["Carte ou badge"],["Contrat"]],"Nom erroné":[["Données de l'apprenti","Nom erroné ou mal écrit"]],"Abandon ou refus":[["Abandon ou refus"]],"Problème avec le centre de formation":[["Centre de formation"]],"Discrimination ou mauvais traitement":[["Mauvais traitement ou discrimination"]],"Autre":[["Autre"]]};
+const LEG={"Paiement":[["Paiement"]],"Distance apprenti-UE":[["UE","Distance entre l'apprenti et l'UE"]],"UE introuvable ou non outillée":[["UE"]],"Erreur d'affectation":[["Affectation","Erreur d'affectation"]],"Problème avec l'UE":[["UE"]],"Problème avec le MAR":[["MAR"]],"Problème avec le conseiller":[["Conseiller de suivi"]],"Carte ou contrat":[["Badge"],["Contrat"]],"Nom erroné":[["Données de l'apprenti","Nom erroné ou mal écrit"]],"Abandon ou refus":[["Abandon ou refus"]],"Problème avec le centre de formation":[["Centre de formation"]],"Discrimination ou mauvais traitement":[["Mauvais traitement ou discrimination"]],"Autre":[["Autre"]]};
 const pbOf=g=>PB.find(x=>x.g===g);
 function destOf(g,sb){const b=pbOf(g);if(!b)return "";const it=sb?b.s.find(x=>x[0]===sb):null;return (it&&it[1])||b.d||"";}
 function selOf(r){
@@ -740,10 +740,10 @@ const QR={
 "Contrat > Contrat introuvable ou non remis":"L'apprenti a-t-il reçu son contrat ?",
 "Contrat > Contrat à modifier après changement d'UE":"Le contrat a-t-il été modifié ?",
 "Contrat > Erreur dans le contrat (nom, métier, montant)":"Le contrat a-t-il été corrigé ?",
-"Carte ou badge > Apprenti sans carte":"L'apprenti a-t-il reçu sa carte ou son badge ?",
-"Carte ou badge > Carte pas encore distribuée":"La carte a-t-elle été distribuée ?",
-"Carte ou badge > Erreur sur la carte (nom, photo)":"La carte a-t-elle été corrigée ?",
-"Carte ou badge > Carte perdue ou détériorée":"Une nouvelle carte a-t-elle été remise ?",
+"Badge > Apprenti sans carte":"L'apprenti a-t-il reçu sa carte ou son badge ?",
+"Badge > Carte pas encore distribuée":"La carte a-t-elle été distribuée ?",
+"Badge > Erreur sur la carte (nom, photo)":"La carte a-t-elle été corrigée ?",
+"Badge > Carte perdue ou détériorée":"Une nouvelle carte a-t-elle été remise ?",
 "Affectation > Erreur d'affectation":"L'affectation a-t-elle été corrigée ?",
 "Affectation > Apprenti pas encore affecté":"L'apprenti a-t-il été affecté ?",
 "Affectation > Affectation trop éloignée du domicile":"L'apprenti a-t-il été rapproché de son domicile ?",
