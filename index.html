@@ -233,7 +233,7 @@ dialog .row{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
       <div><label class="f" for="date">Date de réception</label><input type="date" id="date"></div>
       <div><label class="f" for="statut">Statut</label><select id="statut"></select></div>
     </div>
-    <div style="margin-top:12px"><span class="f" style="font-weight:600;font-size:13px;color:var(--muted)">Gros problème (plusieurs choix possibles) *</span>
+    <div style="margin-top:12px"><span class="f" style="font-weight:600;font-size:13px;color:var(--muted)">Catégorie du problème (plusieurs choix possibles) *</span>
       <div class="chips" id="pbs"></div></div>
     <div id="subs"></div>
     <div id="route" class="alert i" hidden></div>
@@ -557,7 +557,7 @@ function toRow(uid){
 $("bSave").onclick=async()=>{
   if(!nomCourant()){toast("Choisir d'abord l'apprenti.");$("q").focus();return;}
   if(!F.p&&(!F.centre.trim()||!F.metier.trim())){toast("Apprenti introuvable : renseigner au moins son centre et son métier.");(F.centre.trim()?$("iMetier"):$("iCentre")).focus();return;}
-  if(!F.gros.length){toast("Choisir le gros problème.");return;}
+  if(!F.gros.length){toast("Choisir la catégorie du problème.");return;}
   if(!F.legacy){const miss=PB.filter(b=>F.gros.includes(b.g)&&b.s.length&&!F.sous.some(x=>x.startsWith(b.g+" > ")));
     if(miss.length){toast("Choisir le sous-problème pour : "+miss.map(b=>b.g).join(", ")+".");return;}}
   if(F.uid){
@@ -672,7 +672,7 @@ function renderDash(){
   $("dash").innerHTML=`
   <div class="kpis">${k(act.length,"Plaintes enregistrées")}${k(apprentis,"Apprentis concernés")}${k(clo,"Plaintes clôturées")}${k(act.length-clo,"Plaintes en cours")}${k(reg,"Plaintes réglées")}${k(ann,"Plaintes annulées")}</div>
   <div class="grid g2">
-    <div class="card"><h2>Plaintes par gros problème</h2>${bars(gc,PB.map(b=>b.g).filter(g=>gc[g]))}<p class="note">Une plainte peut avoir plusieurs problèmes : le total peut dépasser le nombre de plaintes.</p></div>
+    <div class="card"><h2>Plaintes par catégorie de problème</h2>${bars(gc,PB.map(b=>b.g).filter(g=>gc[g]))}<p class="note">Une plainte peut avoir plusieurs problèmes : le total peut dépasser le nombre de plaintes.</p></div>
     <div class="card"><h2>Transmission des plaintes</h2><p style="margin:0 0 6px;font-weight:600">Plainte transmise</p>${bars(trn,["Oui","Non"].concat(trn["Non renseigné"]?["Non renseigné"]:[]))}<p style="margin:14px 0 6px;font-weight:600">Transmise à</p>${bars(dst,TD)}</div>
     <div class="card" style="grid-column:1/-1"><h2>Détail par sous-problème</h2>${detail||'<div class="empty">Aucune donnée</div>'}</div>
     <div class="card" style="grid-column:1/-1"><h2>Résolution des problèmes</h2>${resHtml||'<div class="empty">Aucune réponse enregistrée dans le traitement</div>'}</div>
