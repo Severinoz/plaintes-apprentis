@@ -3,6 +3,25 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<script>
+window.APP_BUILD="20261105-1";
+(function(){
+  function check(){
+    try{
+      fetch(location.pathname+"?_="+Date.now(),{cache:"no-store"}).then(function(r){return r.text();}).then(function(t){
+        var m=t.match(/APP_BUILD="([^"]+)"/);
+        if(m&&m[1]!==window.APP_BUILD){
+          var u=new URL(location.href); u.searchParams.set("v",m[1]); location.replace(u.toString());
+        }
+      }).catch(function(){});
+    }catch(e){}
+  }
+  check();
+  document.addEventListener("visibilitychange",function(){ if(!document.hidden) check(); });
+})();
+</script>
 <title>Gestion des plaintes des apprentis</title>
 <style>
 :root{
