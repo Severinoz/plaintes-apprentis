@@ -2,7 +2,7 @@
 /* ---------- partage (Google Sheet) ---------- */
 function isAdmin(){return !SYNC.on||SYNC.role==="Administrateur";}
 function applyRole(){
-  const a=isAdmin();
+  const a=isAdmin();SYNC.readonly=SYNC.role==="Lecture";$("actions").hidden=SYNC.readonly;
   document.querySelector('#nav [data-v="tableau"]').hidden=!a;
   document.querySelector('#nav [data-v="admin"]').hidden=!(a&&SYNC.on);
   $("exp").hidden=!a;$("imp").hidden=!a;
@@ -16,21 +16,23 @@ async function api(body){
     const j=await r.json();if(!j.ok){const e=new Error(j.err||"erreur");e.code=j.err;throw e;}return j;
   }finally{clearTimeout(t);}
 }
-function persistSync(){try{localStorage.setItem("icompete_synced_v1",JSON.stringify(SYNC.synced));localStorage.setItem("icompete_sc_v1",JSON.stringify(SYNC.sc));}catch(e){}}
+function persistSync(){try{DB.setItem("icompete_synced_v1",JSON.stringify(SYNC.synced));DB.setItem("icompete_sc_v1",JSON.stringify(SYNC.sc));}catch(e){}savePending();}
 function pendingN(){return rows.filter(r=>SYNC.synced[r.uid]!==(r.maj||"")).length+Object.keys(contacts).filter(id=>SYNC.sc[id]!==JSON.stringify(contacts[id])).length;}
 function status(){
   const el=$("sync");if(!SYNC.on){el.hidden=true;$("logout").hidden=true;return;}
   el.hidden=false;$("logout").hidden=false;const n=pendingN();let t;
   if(!SYNC.ok)t=SYNC.err?"Hors ligne"+(n?" : "+n+" en attente":""):"Connexion...";
-  else t=(n?"Envoi en cours ("+n+")":"En ligne")+" · "+SYNC.nom;
+  else t=(SYNC.readonly?"Lecture seule":n?"Envoi en cours ("+n+")":"En ligne")+" · "+SYNC.nom;
   el.textContent=t;el.className="theme sync "+(SYNC.ok&&!n?"ok":"w");el.title="Cliquer pour actualiser";
 }
 let ft;
 function sched(){if(!SYNC.on||!SYNC.ok)return;clearTimeout(ft);ft=setTimeout(flush,600);status();}
 function showLogin(msg){$("login").hidden=false;$("lgErr").textContent=msg||"";setTimeout(()=>$("lgCode").focus(),50);}
-function lostAccess(){SYNC.ok=false;SYNC.code="";try{sessionStorage.removeItem("icompete_code");}catch(e){}showLogin("Code incorrect ou accès désactivé.");status();}
+function wipeSession(){try{Object.keys(sessionStorage).filter(k=>k.indexOf("icompete_")===0).forEach(k=>sessionStorage.removeItem(k));}catch(e){}}
+/* Accès refusé : on efface la session de l'onglet (les saisies non envoyées restent gardées au nom de leur auteur) puis on recharge. */
+function lostAccess(){savePending();wipeSession();try{sessionStorage.setItem("icompete_msg","Code incorrect ou accès désactivé.");}catch(e){}location.reload();}
 async function flush(){
-  if(!SYNC.on||!SYNC.ok||SYNC.busy||SYNC.pulling)return;
+  if(!SYNC.on||!SYNC.ok||SYNC.busy||SYNC.pulling||SYNC.readonly)return;
   const dr=rows.filter(r=>SYNC.synced[r.uid]!==(r.maj||""));
   const dc=Object.keys(contacts).filter(id=>SYNC.sc[id]!==JSON.stringify(contacts[id]));
   if(!dr.length&&!dc.length){status();return;}
@@ -48,6 +50,7 @@ async function flush(){
     saveLocal();persistSync();SYNC.err="";
   }catch(e){
     if(e.code==="code"){SYNC.busy=false;lostAccess();return;}
+    if(e.code==="droits"){SYNC.busy=false;SYNC.readonly=true;toast("Votre compte est en lecture seule : modification non enregistrée.");applyRole();status();return;}
     SYNC.ok=false;SYNC.err=e.message||"reseau";
   }
   SYNC.busy=false;status();
@@ -68,12 +71,15 @@ async function pull(full){
   SYNC.pulling=true;
   try{
     const j=await api({action:"list",noApp:!full&&SYNC.appLoaded});
-    SYNC.nom=j.nom;SYNC.role=j.role||"Utilisateur";try{sessionStorage.setItem("icompete_role",SYNC.role);}catch(e){}SYNC.ok=true;SYNC.err="";
-    if(j.apprentis){EXTRA=j.apprentis;SYNC.appLoaded=true;try{localStorage.setItem("icompete_app_v1",JSON.stringify(EXTRA));}catch(e){}buildPeople();fillLists();}
+    SYNC.nom=j.nom;SYNC.role=j.role||"Utilisateur";try{sessionStorage.setItem("icompete_role",SYNC.role);sessionStorage.setItem("icompete_nom",SYNC.nom);}catch(e){}SYNC.ok=true;SYNC.err="";
+    if(j.apprentis){EXTRA=j.apprentis;SYNC.appLoaded=true;try{DB.setItem("icompete_app_v1",JSON.stringify(EXTRA));}catch(e){}buildPeople();fillLists();}
     (j.contacts||[]).forEach(c=>{const l=contacts[c.id];
       if(!l||SYNC.sc[c.id]===JSON.stringify(l)){contacts[c.id]={tel:c.tel,autre:c.autre};SYNC.sc[c.id]=JSON.stringify(contacts[c.id]);}});
-    try{localStorage.setItem(CKEY,JSON.stringify(contacts));}catch(e){}
-    const srv=new Map((j.plaintes||[]).map(r=>[r.uid,r]));
+    try{DB.setItem(CKEY,JSON.stringify(contacts));}catch(e){}
+    restorePending();
+    const okRow=r=>r&&/^[\w-]{1,60}$/.test(String(r.uid));
+    const cleanRow=r=>{["date","transDate"].forEach(k=>{if(r[k]&&!/^\d{4}-\d{2}-\d{2}/.test(r[k]))r[k]="";});return r;};
+    const srv=new Map((j.plaintes||[]).filter(okRow).map(r=>[r.uid,cleanRow(r)]));
     const loc=new Map(rows.map(r=>[r.uid,r]));
     const out=[];
     srv.forEach((r,uid)=>{
@@ -97,7 +103,10 @@ $("lgGo").onclick=async()=>{
 };
 $("lgCode").addEventListener("keydown",e=>{if(e.key==="Enter")$("lgGo").click();});
 $("sync").onclick=()=>{if(SYNC.code)pull(true);else showLogin();};
-$("logout").onclick=()=>{SYNC.ok=false;SYNC.code="";SYNC.role="";try{sessionStorage.removeItem("icompete_code");sessionStorage.removeItem("icompete_role");}catch(e){}status();applyRole();showLogin();};
+$("logout").onclick=async()=>{
+  try{if(SYNC.ok&&pendingN()>0)await Promise.race([flush(),new Promise(r=>setTimeout(r,8000))]);}catch(e){}
+  savePending();wipeSession();location.reload();
+};
 $("bAdd").onclick=async()=>{
   const nom=(F.libre||"").trim();
   if(!nom||!F.centre.trim()||!F.metier.trim()){toast("Renseigner d'abord le centre et le métier.");return;}
@@ -110,10 +119,10 @@ $("bAdd").onclick=async()=>{
   const p=people.find(x=>String(x.id)===id);
   if(p){F.p=p;F.libre="";$("iId").value="";$("iMar").value="";renderApprenti();toast("Apprenti ajouté à la base partagée.");}
 };
-const MSGU={code_pris:"Ce code est déjà utilisé par quelqu'un d'autre.",self:"Impossible de retirer tes propres droits d'administrateur ou ton accès.",champs:"Renseigner le nom et le code.",droits:"Réservé aux administrateurs."};
+const MSGU={court:"Le code doit contenir au moins 10 caractères.",code_pris:"Ce code est déjà utilisé par quelqu'un d'autre.",self:"Impossible de retirer tes propres droits d'administrateur ou ton accès.",champs:"Renseigner le nom et le code.",droits:"Réservé aux administrateurs."};
 function drawUsers(us){
-  $("uBody").innerHTML=us.map(u=>`<tr data-n="${esc(u.nom)}"><td><strong>${esc(u.nom)}</strong></td><td><input type="text" class="uc" value="${esc(u.code)}" autocomplete="off"></td>
-    <td><select class="ur"><option ${u.role==="Utilisateur"?"selected":""}>Utilisateur</option><option ${u.role==="Administrateur"?"selected":""}>Administrateur</option></select></td>
+  $("uBody").innerHTML=us.map(u=>`<tr data-n="${esc(u.nom)}"><td><strong>${esc(u.nom)}</strong></td><td><input type="text" class="uc" value="${esc(u.code)}" placeholder="${u.chiffre?"Code chiffré : saisir pour le changer":""}" autocomplete="off"></td>
+    <td><select class="ur"><option ${u.role==="Utilisateur"?"selected":""}>Utilisateur</option><option ${u.role==="Administrateur"?"selected":""}>Administrateur</option><option ${u.role==="Lecture"?"selected":""}>Lecture</option></select></td>
     <td><select class="ua"><option ${u.actif==="Oui"?"selected":""}>Oui</option><option ${u.actif==="Non"?"selected":""}>Non</option></select></td>
     <td class="act"><button class="btn s" data-su="1" type="button">Enregistrer</button></td></tr>`).join("")||`<tr><td colspan="5" class="empty">Aucun utilisateur.</td></tr>`;
 }
@@ -130,13 +139,13 @@ async function saveUser(u){
 }
 $("uBody").addEventListener("click",e=>{const b=e.target.closest("[data-su]");if(!b)return;const tr=b.closest("tr");
   saveUser({nom:tr.dataset.n,code:tr.querySelector(".uc").value.trim(),role:tr.querySelector(".ur").value,actif:tr.querySelector(".ua").value});});
-$("uGen").onclick=()=>{const L="ABCDEFGHJKLMNPQRSTUVWXYZ";let c="";for(let i=0;i<3;i++)c+=L[Math.floor(Math.random()*L.length)];$("uCode").value=c+"-"+String(Math.floor(1000+Math.random()*9000));};
+$("uGen").onclick=()=>{const L="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",a=new Uint32Array(12);crypto.getRandomValues(a);let c="";a.forEach((x,i)=>{c+=L[x%L.length];if(i%4===3&&i<11)c+="-";});$("uCode").value=c;};
 $("uAdd").onclick=async()=>{const nom=$("uNom").value.trim(),code=$("uCode").value.trim();
   if(!nom||!code){toast("Renseigner le nom et le code (bouton Générer un code).");return;}
   if(await saveUser({nom,code,role:$("uRole").value,actif:"Oui"})){$("uNom").value="";$("uCode").value="";}};
 function startSync(){
   applyRole();status();if(!SYNC.on)return;
-  if(!SYNC.code){showLogin();}else pull(true);
+  if(!SYNC.code){let m="";try{m=sessionStorage.getItem("icompete_msg")||"";sessionStorage.removeItem("icompete_msg");}catch(e){}showLogin(m);}else pull(true);
   setInterval(()=>{if(document.visibilityState==="visible"&&SYNC.code)pull();},45000);
   document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&SYNC.code)pull();});
 }

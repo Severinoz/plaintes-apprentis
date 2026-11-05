@@ -6,15 +6,29 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <script>
-window.APP_BUILD="20261105-4";
+window.APP_BUILD="20261105-5";
 (function(){
+  function num(v){var p=String(v).split("-");return [parseInt(p[0],10)||0,parseInt(p[1],10)||0];}
+  function newer(a,b){var x=num(a),y=num(b);return x[0]>y[0]||(x[0]===y[0]&&x[1]>y[1]);}
+  function busy(){
+    var a=document.activeElement;
+    if(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&a.id!=="lgCode")return true;
+    try{return !!(window.formDirty&&window.formDirty());}catch(e){return false;}
+  }
+  function go(v){var u=new URL(location.href);u.searchParams.set("v",v);location.replace(u.toString());}
+  function banner(v){
+    if(document.getElementById("majbar"))return;
+    var d=document.createElement("div");d.id="majbar";
+    d.style.cssText="position:fixed;left:12px;right:12px;bottom:12px;z-index:99;background:#17365d;color:#fff;padding:12px 14px;border-radius:10px;display:flex;gap:12px;align-items:center;justify-content:space-between;font:14px system-ui,sans-serif";
+    d.innerHTML='<span>Une nouvelle version est disponible. Terminez votre saisie, puis actualisez.</span>';
+    var b=document.createElement("button");b.textContent="Actualiser";b.style.cssText="padding:8px 14px;border:0;border-radius:8px;font-weight:700;cursor:pointer";
+    b.onclick=function(){go(v);};d.appendChild(b);document.body.appendChild(d);
+  }
   function check(){
     try{
       fetch(location.pathname+"?_="+Date.now(),{cache:"no-store"}).then(function(r){return r.text();}).then(function(t){
         var m=t.match(/APP_BUILD="([^"]+)"/);
-        if(m&&m[1]!==window.APP_BUILD){
-          var u=new URL(location.href); u.searchParams.set("v",m[1]); location.replace(u.toString());
-        }
+        if(m&&newer(m[1],window.APP_BUILD)){ if(busy())banner(m[1]); else go(m[1]); }
       }).catch(function(){});
     }catch(e){}
   }
@@ -23,7 +37,7 @@ window.APP_BUILD="20261105-4";
 })();
 </script>
 <title>Gestion des plaintes des apprentis</title>
-<link rel="stylesheet" href="css/style.css?v=20261105-4">
+<link rel="stylesheet" href="css/style.css?v=20261105-5">
 </head>
 <body>
 <header class="top"><div class="top-in">
@@ -50,7 +64,7 @@ window.APP_BUILD="20261105-4";
     <h2>1. Identification de l'apprenti</h2>
     <div class="search" id="searchBox">
       <label class="f" for="q">Nom, ID, téléphone ou UE de l'apprenti</label>
-      <input type="search" id="q" autocomplete="off" placeholder="Taper au moins 2 lettres">
+      <input type="search" id="q" maxlength="100" autocomplete="off" placeholder="Taper au moins 2 lettres">
       <div class="sugg" id="sugg" hidden></div>
     </div>
     <div id="chosen"></div>
@@ -66,8 +80,8 @@ window.APP_BUILD="20261105-4";
       <h3>Apprenti introuvable dans la base : renseigner son affectation</h3>
       <p class="muted" style="margin:0 0 10px">Utile quand l'apprenti n'est pas dans la base ou quand son affectation est erronée.</p>
       <div class="grid g2">
-        <div><label class="f" for="iCentre">Centre de formation *</label><input type="text" id="iCentre" list="dlCentres"></div>
-        <div><label class="f" for="iMetier">Métier *</label><input type="text" id="iMetier" list="dlMetiers"></div>
+        <div><label class="f" for="iCentre">Centre de formation *</label><input type="text" id="iCentre" list="dlCentres" maxlength="120"></div>
+        <div><label class="f" for="iMetier">Métier *</label><input type="text" id="iMetier" list="dlMetiers" maxlength="120"></div>
         <div><label class="f" for="iUE">UE (si connue)</label><input type="text" id="iUE"></div>
       </div>
       <div style="margin-top:12px"><span class="f" style="font-weight:600;font-size:13px;color:var(--muted)">Intégration de l'apprenti</span>
@@ -100,7 +114,7 @@ window.APP_BUILD="20261105-4";
       <div class="chips" id="pbs"></div></div>
     <div id="subs"></div>
     <div id="route" class="alert i" hidden></div>
-    <div style="margin-top:12px"><label class="f" for="desc">Description détaillée</label><textarea id="desc"></textarea></div>
+    <div style="margin-top:12px"><label class="f" for="desc">Description détaillée</label><textarea id="desc" maxlength="5000"></textarea></div>
   </div>
 
 
@@ -149,7 +163,7 @@ window.APP_BUILD="20261105-4";
     <h2 style="margin-top:18px">Ajouter un utilisateur</h2>
     <div class="tools">
       <div><label class="f" for="uNom">Nom</label><input type="text" id="uNom" autocomplete="off"></div>
-      <div><label class="f" for="uRole">Rôle</label><select id="uRole"><option>Utilisateur</option><option>Administrateur</option></select></div>
+      <div><label class="f" for="uRole">Rôle</label><select id="uRole"><option>Utilisateur</option><option>Administrateur</option><option>Lecture</option></select></div>
       <div><label class="f" for="uCode">Code d'accès</label><input type="text" id="uCode" autocomplete="off"></div>
       <button class="btn" id="uGen" type="button">Générer un code</button>
       <button class="btn p" id="uAdd" type="button">Ajouter</button>
@@ -178,14 +192,14 @@ window.APP_BUILD="20261105-4";
 <datalist id="dlCentres"></datalist><datalist id="dlMetiers"></datalist>
 <dialog id="dlg"><p id="dlgMsg"></p><div class="row" id="dlgBtns"></div></dialog>
 
-<script src="js/config.js?v=20261105-4"></script>
-<script src="js/donnees.js?v=20261105-4"></script>
-<script src="js/formulaire.js?v=20261105-4"></script>
-<script src="js/enregistrement.js?v=20261105-4"></script>
-<script src="js/registre.js?v=20261105-4"></script>
-<script src="js/tableau.js?v=20261105-4"></script>
-<script src="js/traitement.js?v=20261105-4"></script>
-<script src="js/navigation.js?v=20261105-4"></script>
-<script src="js/sync.js?v=20261105-4"></script>
+<script src="js/config.js?v=20261105-5"></script>
+<script src="js/donnees.js?v=20261105-5"></script>
+<script src="js/formulaire.js?v=20261105-5"></script>
+<script src="js/enregistrement.js?v=20261105-5"></script>
+<script src="js/registre.js?v=20261105-5"></script>
+<script src="js/tableau.js?v=20261105-5"></script>
+<script src="js/traitement.js?v=20261105-5"></script>
+<script src="js/navigation.js?v=20261105-5"></script>
+<script src="js/sync.js?v=20261105-5"></script>
 </body>
 </html>

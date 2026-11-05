@@ -13,8 +13,8 @@ function renderRegistre(){
   const list=rows.filter(r=>(!s||r.statut===s)&&(!c||r.centre===c)&&(!q||norm([r.nom,r.ue,r.centre,r.nature,r.desc,r.id,r.tel,r.autre].join(" ")).includes(q)))
     .sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.maj||"").localeCompare(a.maj||""));
   $("regCount").textContent=list.length+" plainte(s) affichée(s) sur "+rows.length;
-  $("regBody").innerHTML=list.length?list.map(r=>`<tr><td>${fmt(r.date)}</td><td><strong>${esc(r.nom)}</strong><br><span class="muted">${esc(r.id)}${r.par?" · saisi par "+esc(r.par):""}</span></td><td>${esc(r.ue)}</td><td>${esc(r.centre)}</td><td>${esc(r.nature)}</td><td>${badge(r.statut)}</td><td>${esc(r.res)}</td>
-  <td class="act"><button class="btn s" data-o="${r.uid}">Actualiser</button> ${r.statut==="Annulée"?"":`<button class="btn s d" data-c="${r.uid}">Annuler</button>`}</td></tr>`).join(""):`<tr><td colspan="8" class="empty">Aucune plainte enregistrée.</td></tr>`;
+  $("regBody").innerHTML=list.length?list.map(r=>`<tr><td>${esc(fmt(r.date))}</td><td><strong>${esc(r.nom)}</strong><br><span class="muted">${esc(r.id)}${r.par?" · saisi par "+esc(r.par):""}</span></td><td>${esc(r.ue)}</td><td>${esc(r.centre)}</td><td>${esc(r.nature)}</td><td>${badge(r.statut)}</td><td>${esc(r.res)}</td>
+  <td class="act"><button class="btn s" data-o="${esc(r.uid)}">Actualiser</button> ${r.statut==="Annulée"?"":`<button class="btn s d" data-c="${esc(r.uid)}">Annuler</button>`}</td></tr>`).join(""):`<tr><td colspan="8" class="empty">Aucune plainte enregistrée.</td></tr>`;
 }
 ["rq","rs","rc"].forEach(id=>$(id).addEventListener("input",renderRegistre));
 $("regBody").addEventListener("click",async e=>{
@@ -27,7 +27,7 @@ $("regBody").addEventListener("click",async e=>{
 
 /* export / import */
 const COLS=[["id","ID apprenti"],["date","Date réception"],["nom","Nom et prénom"],["ue","UE"],["centre","Centre"],["metier","Métier"],["mar","MAR"],["tel","Téléphone"],["autre","Autre numéro"],["nature","Nature plainte"],["gros","Gros problèmes"],["sous","Sous-problèmes"],["prec","Précisions"],["desc","Description"],["statut","Statut"],["carte","Carte ?"],["paye","Payé ?"],["ctr","Contractualisé ?"],["chg","Changement d'UE ?"],["contrat","Contrat modifié ?"],["res","Résultat du traitement"],["integ","Intégration de l'apprenti"],["fait","Traitement fait ?"],["voeu","Vœu de l'apprenti satisfait ?"],["trans","Transmise ?"],["dest","Transmise à"],["destAutre","Autre destinataire"],["transDate","Date de transmission"],["par","Saisi par"],["majPar","Modifié par"],["suivi","Suivi de la résolution"]];
-function csvCell(v){v=String(v==null?"":v);return /[;"\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+function csvCell(v){v=String(v==null?"":v);if(/^[=+\-@\t\r]/.test(v)&&!/^[+\-]?[\d\s().,\-]+$/.test(v))v="'"+v;return /[;"\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
 $("exp").onclick=()=>{
     const lines=[COLS.map(c=>csvCell(c[1])).join(";")].concat(rows.map(r=>COLS.map(c=>csvCell((c[0]==="date"||c[0]==="transDate")?fmt(r[c[0]]):r[c[0]])).join(";")));
   const blob=new Blob(["﻿"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"});

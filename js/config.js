@@ -35,6 +35,11 @@ const SEEDKEY = "icompete_plaintes_seed_v1";
 const SHEET_URL = "https://script.google.com/macros/s/AKfycbyZicCHLGD1_DKnNREw4X-Mpx-DCJ2n8Bsz-mQelJGuBaIXOkhrjmgI-lNe-GrA04JtdA/exec";
 let SU = SHEET_URL; try{ SU = SU || localStorage.getItem("icompete_sheet_url") || ""; }catch(e){}
 const SYNC = {on:!!SU, role:"", ok:false, busy:false, pulling:false, nom:"", code:"", synced:{}, sc:{}, err:""};
-try{ try{localStorage.removeItem("icompete_code");localStorage.removeItem("icompete_role");}catch(e){} SYNC.role=sessionStorage.getItem("icompete_role")||""; SYNC.code=sessionStorage.getItem("icompete_code")||""; SYNC.synced=JSON.parse(localStorage.getItem("icompete_synced_v1")||"{}")||{}; SYNC.sc=JSON.parse(localStorage.getItem("icompete_sc_v1")||"{}")||{}; }catch(e){}
+/* Avec la base partagée, les données de travail restent dans la session de l'onglet (sessionStorage) :
+   elles disparaissent à la fermeture. Seules les saisies non envoyées sont gardées dans localStorage, au nom de leur auteur. */
+const DB=(()=>{try{return SYNC.on?sessionStorage:localStorage;}catch(e){return localStorage;}})();
+try{ if(SYNC.on)["icompete_code","icompete_role","icompete_plaintes_v1","icompete_app_v1","icompete_contacts_v1","icompete_synced_v1","icompete_sc_v1"].forEach(k=>localStorage.removeItem(k)); }catch(e){}
+try{ SYNC.role=sessionStorage.getItem("icompete_role")||""; SYNC.nom=sessionStorage.getItem("icompete_nom")||""; SYNC.code=sessionStorage.getItem("icompete_code")||""; SYNC.synced=JSON.parse(DB.getItem("icompete_synced_v1")||"{}")||{}; SYNC.sc=JSON.parse(DB.getItem("icompete_sc_v1")||"{}")||{}; }catch(e){}
+SYNC.readonly=SYNC.role==="Lecture";
 const SEED = [];
 
