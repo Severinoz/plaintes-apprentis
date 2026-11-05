@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <script>
-window.APP_BUILD="20261105-2";
+window.APP_BUILD="20261105-3";
 (function(){
   function check(){
     try{
@@ -978,7 +978,7 @@ $("lgGo").onclick=async()=>{
   const c=$("lgCode").value.trim();if(!c)return;SYNC.code=c;$("lgErr").textContent="Vérification...";
   try{await api({action:"login"});try{sessionStorage.setItem("icompete_code",c);}catch(e){}
     $("login").hidden=true;$("lgCode").value="";await pull(true);}
-  catch(e){SYNC.code="";$("lgErr").textContent=e.code==="code"?"Code incorrect ou accès désactivé.":"Connexion impossible : vérifier internet.";}
+  catch(e){SYNC.code="";$("lgErr").textContent=e.code==="code"?"Code incorrect ou accès désactivé.":e.code==="bloque"?"Trop d'essais incorrects. Réessayer dans 10 minutes.":"Connexion impossible : vérifier internet.";}
 };
 $("lgCode").addEventListener("keydown",e=>{if(e.key==="Enter")$("lgGo").click();});
 $("sync").onclick=()=>{if(SYNC.code)pull(true);else showLogin();};
