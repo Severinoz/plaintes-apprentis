@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <script>
-window.APP_BUILD="20261105-1";
+window.APP_BUILD="20261105-2";
 (function(){
   function check(){
     try{
@@ -371,7 +371,7 @@ const SEEDKEY = "icompete_plaintes_seed_v1";
 const SHEET_URL = "https://script.google.com/macros/s/AKfycbyZicCHLGD1_DKnNREw4X-Mpx-DCJ2n8Bsz-mQelJGuBaIXOkhrjmgI-lNe-GrA04JtdA/exec";
 let SU = SHEET_URL; try{ SU = SU || localStorage.getItem("icompete_sheet_url") || ""; }catch(e){}
 const SYNC = {on:!!SU, role:"", ok:false, busy:false, pulling:false, nom:"", code:"", synced:{}, sc:{}, err:""};
-try{ SYNC.role=localStorage.getItem("icompete_role")||""; SYNC.code=localStorage.getItem("icompete_code")||""; SYNC.synced=JSON.parse(localStorage.getItem("icompete_synced_v1")||"{}")||{}; SYNC.sc=JSON.parse(localStorage.getItem("icompete_sc_v1")||"{}")||{}; }catch(e){}
+try{ try{localStorage.removeItem("icompete_code");localStorage.removeItem("icompete_role");}catch(e){} SYNC.role=sessionStorage.getItem("icompete_role")||""; SYNC.code=sessionStorage.getItem("icompete_code")||""; SYNC.synced=JSON.parse(localStorage.getItem("icompete_synced_v1")||"{}")||{}; SYNC.sc=JSON.parse(localStorage.getItem("icompete_sc_v1")||"{}")||{}; }catch(e){}
 const SEED = [];
 
 /* ---------- données ---------- */
@@ -913,7 +913,7 @@ function status(){
 let ft;
 function sched(){if(!SYNC.on||!SYNC.ok)return;clearTimeout(ft);ft=setTimeout(flush,600);status();}
 function showLogin(msg){$("login").hidden=false;$("lgErr").textContent=msg||"";setTimeout(()=>$("lgCode").focus(),50);}
-function lostAccess(){SYNC.ok=false;SYNC.code="";try{localStorage.removeItem("icompete_code");}catch(e){}showLogin("Code incorrect ou accès désactivé.");status();}
+function lostAccess(){SYNC.ok=false;SYNC.code="";try{sessionStorage.removeItem("icompete_code");}catch(e){}showLogin("Code incorrect ou accès désactivé.");status();}
 async function flush(){
   if(!SYNC.on||!SYNC.ok||SYNC.busy||SYNC.pulling)return;
   const dr=rows.filter(r=>SYNC.synced[r.uid]!==(r.maj||""));
@@ -953,7 +953,7 @@ async function pull(full){
   SYNC.pulling=true;
   try{
     const j=await api({action:"list",noApp:!full&&SYNC.appLoaded});
-    SYNC.nom=j.nom;SYNC.role=j.role||"Utilisateur";try{localStorage.setItem("icompete_role",SYNC.role);}catch(e){}SYNC.ok=true;SYNC.err="";
+    SYNC.nom=j.nom;SYNC.role=j.role||"Utilisateur";try{sessionStorage.setItem("icompete_role",SYNC.role);}catch(e){}SYNC.ok=true;SYNC.err="";
     if(j.apprentis){EXTRA=j.apprentis;SYNC.appLoaded=true;try{localStorage.setItem("icompete_app_v1",JSON.stringify(EXTRA));}catch(e){}buildPeople();fillLists();}
     (j.contacts||[]).forEach(c=>{const l=contacts[c.id];
       if(!l||SYNC.sc[c.id]===JSON.stringify(l)){contacts[c.id]={tel:c.tel,autre:c.autre};SYNC.sc[c.id]=JSON.stringify(contacts[c.id]);}});
@@ -976,13 +976,13 @@ async function pull(full){
 }
 $("lgGo").onclick=async()=>{
   const c=$("lgCode").value.trim();if(!c)return;SYNC.code=c;$("lgErr").textContent="Vérification...";
-  try{await api({action:"login"});try{localStorage.setItem("icompete_code",c);}catch(e){}
+  try{await api({action:"login"});try{sessionStorage.setItem("icompete_code",c);}catch(e){}
     $("login").hidden=true;$("lgCode").value="";await pull(true);}
   catch(e){SYNC.code="";$("lgErr").textContent=e.code==="code"?"Code incorrect ou accès désactivé.":"Connexion impossible : vérifier internet.";}
 };
 $("lgCode").addEventListener("keydown",e=>{if(e.key==="Enter")$("lgGo").click();});
 $("sync").onclick=()=>{if(SYNC.code)pull(true);else showLogin();};
-$("logout").onclick=()=>{SYNC.ok=false;SYNC.code="";SYNC.role="";try{localStorage.removeItem("icompete_code");localStorage.removeItem("icompete_role");}catch(e){}status();applyRole();showLogin();};
+$("logout").onclick=()=>{SYNC.ok=false;SYNC.code="";SYNC.role="";try{sessionStorage.removeItem("icompete_code");sessionStorage.removeItem("icompete_role");}catch(e){}status();applyRole();showLogin();};
 $("bAdd").onclick=async()=>{
   const nom=(F.libre||"").trim();
   if(!nom||!F.centre.trim()||!F.metier.trim()){toast("Renseigner d'abord le centre et le métier.");return;}
