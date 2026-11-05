@@ -12,7 +12,7 @@ function renderTrait(keep){
     return !q||norm([r.nom,r.centre,r.ue,r.nature,r.id].join(" ")).includes(q);
   }).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
   $("tCount").textContent=list.length+" plainte(s)";
-  $("tList").innerHTML=list.length?list.map(r=>`<button type="button" class="tcard" data-t="${r.uid}" aria-pressed="${T.uid===r.uid}"><b>${esc(r.nom)}</b><span class="m">${esc(r.nature)} · ${esc(r.centre)}</span><br>${badge(r.statut)} ${progBadge(r)} ${r.res?`<span class="badge ${r.res==="Réglé"?"ok":r.res==="Injoignable"?"bad":"warn"}">${esc(r.res)}</span>`:""}</button>`).join(""):`<div class="empty">Aucune plainte.</div>`;
+  $("tList").innerHTML=list.length?list.map(r=>`<button type="button" class="tcard" data-t="${esc(r.uid)}" aria-pressed="${T.uid===r.uid}"><b>${esc(r.nom)}</b><span class="m">${esc(r.nature)} · ${esc(r.centre)}</span><br>${badge(r.statut)} ${progBadge(r)} ${r.res?`<span class="badge ${r.res==="Réglé"?"ok":r.res==="Injoignable"?"bad":"warn"}">${esc(r.res)}</span>`:""}</button>`).join(""):`<div class="empty">Aucune plainte.</div>`;
   if(keep!==true)renderDetail();
 }
 const QR={
@@ -118,7 +118,7 @@ function renderDetail(){
     <div class="contact"><div><small>Téléphone</small>${esc(r.tel)||"-"}</div><div><small>Autre numéro</small>${esc(r.autre)||"-"}</div><div><small>MAR</small>${esc(r.mar)||"-"}</div><div><small>UE</small>${esc(r.ue)||"-"}</div><div><small>Centre</small>${esc(r.centre)||"-"}</div></div>
     <div class="focus"><div class="ft">Problème signalé</div>${(r.gros?(r.nature||"").split(" ; "):(r.nature||"").split(", ")).filter(Boolean).map(x=>`<div class="fp">${esc(x)}</div>`).join("")||'<div class="fp muted">Non précisé</div>'}
       ${r.desc?`<div class="ft" style="margin-top:12px">Description</div><div class="fd">${esc(r.desc)}</div>`:""}</div>
-    <div style="margin-top:12px"><button class="btn s" data-open2="${r.uid}">Ouvrir la plainte</button></div></div>
+    <div style="margin-top:12px"><button class="btn s" data-open2="${esc(r.uid)}">Ouvrir la plainte</button></div></div>
     ${transCard(r)}${resCard(r)}<div class="card"><h2>Suivi du traitement</h2>
       <span class="f" style="font-weight:600;font-size:13px;color:var(--muted)">Le problème a-t-il été traité ?</span>
       <div class="seg" id="tFait">${["Oui","Non"].map((o,i)=>`<span><input type="radio" name="tFait" id="tFait${i}" value="${o}" ${r.fait===o?"checked":""}><label for="tFait${i}">${o}</label></span>`).join("")}</div>

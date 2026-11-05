@@ -3,8 +3,9 @@
 let F;
 function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 const CKEY="icompete_contacts_v1";let contacts={};
-try{contacts=JSON.parse(localStorage.getItem(CKEY)||"{}")||{};}catch(e){contacts={};}
-function saveContacts(){try{localStorage.setItem(CKEY,JSON.stringify(contacts));}catch(e){}sched();}
+try{contacts=JSON.parse(DB.getItem(CKEY)||"{}")||{};}catch(e){contacts={};}
+function saveContacts(){try{DB.setItem(CKEY,JSON.stringify(contacts));}catch(e){}savePending();sched();}
+window.formDirty=()=>!!(F&&(F.p||F.libre||F.desc||(F.gros&&F.gros.length)));
 (function seedContacts(){let d=false;try{d=!!localStorage.getItem("icompete_seedc1");}catch(e){}
   if(d||SU)return;const S={"816150602":{tel:"73358351",autre:"72784178"}};
   Object.keys(S).forEach(id=>{if(!contacts[id])contacts[id]=S[id];rows.forEach(r=>{if(String(r.id)===id&&!r.autre){r.autre=S[id].autre;if(!r.tel)r.tel=S[id].tel;}});});
@@ -50,8 +51,8 @@ function paintPb(){
     const au=F.sous.includes(b.g+" > "+AUTRE);
     return `<div class="subbox"><div class="subt">${esc(b.g)} : quel est le problème ? (plusieurs choix possibles)</div><div class="chips">`+
       b.s.map(x=>`<button type="button" class="chip" aria-pressed="${F.sous.includes(b.g+" > "+x[0])}" data-g="${esc(b.g)}" data-s="${esc(x[0])}">${esc(x[0])}</button>`).join("")+`</div>`+
-      (au?`<input type="text" class="prec" data-p="${esc(b.g)}" placeholder="Préciser le problème" value="${esc(F.prec[b.g]||"")}">`:"")+`</div>`;}).join("");
-  if(F.gros.includes(AUTRE))h+=`<div class="subbox"><div class="subt">Autre problème : préciser</div><input type="text" class="prec" data-p="${AUTRE}" placeholder="Préciser le problème" value="${esc(F.prec[AUTRE]||"")}"></div>`;
+      (au?`<input type="text" class="prec" maxlength="300" data-p="${esc(b.g)}" placeholder="Préciser le problème" value="${esc(F.prec[b.g]||"")}">`:"")+`</div>`;}).join("");
+  if(F.gros.includes(AUTRE))h+=`<div class="subbox"><div class="subt">Autre problème : préciser</div><input type="text" class="prec" maxlength="300" data-p="${AUTRE}" placeholder="Préciser le problème" value="${esc(F.prec[AUTRE]||"")}"></div>`;
   $("subs").innerHTML=h;routeInfo();
 }
 ["iCentre","iMetier","iUE","iTel","iAutre"].forEach(id=>$(id).addEventListener("input",()=>{F.centre=$("iCentre").value;F.metier=$("iMetier").value;F.ue=$("iUE").value;F.tel=$("iTel").value;F.autre=$("iAutre").value;}));
@@ -131,7 +132,7 @@ function renderHist(){
     let t=`${mine.length} plainte(s) déjà enregistrée(s), dont ${clo} clôturée(s)`;
     const ns=natStr();
     if(ns&&mine.some(r=>r.statut==="Clôturé"&&r.nature===ns))t+=" ; ce même problème a déjà été traité";
-    html=`<div class="alert i">${esc(t)}</div><div class="hist">`+mine.map(r=>`<div class="hrow"><div><strong>${esc(r.nature)}</strong><br><span class="muted">${fmt(r.date)}</span> ${badge(r.statut)}</div>${F.uid===r.uid?'<span class="badge warn">En cours de modification</span>':`<button class="btn s" data-open="${r.uid}">Actualiser la plainte</button>`}</div>`).join("")+`</div>`;
+    html=`<div class="alert i">${esc(t)}</div><div class="hist">`+mine.map(r=>`<div class="hrow"><div><strong>${esc(r.nature)}</strong><br><span class="muted">${esc(fmt(r.date))}</span> ${badge(r.statut)}</div>${F.uid===r.uid?'<span class="badge warn">En cours de modification</span>':`<button class="btn s" data-open="${esc(r.uid)}">Actualiser la plainte</button>`}</div>`).join("")+`</div>`;
   }
   h.innerHTML=html;
 }
