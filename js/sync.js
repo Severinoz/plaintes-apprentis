@@ -70,7 +70,8 @@ async function pull(full){
   if(!SYNC.on||!SYNC.code||SYNC.pulling||SYNC.busy)return;
   SYNC.pulling=true;
   try{
-    const j=await api({action:"list",noApp:!full&&SYNC.appLoaded});
+    const delta=!full&&SYNC.since&&Date.now()-(SYNC.lastFull||0)<600000;   // relecture complète toutes les 10 min
+    const j=await api({action:"list",noApp:!full&&SYNC.appLoaded,since:delta?SYNC.since:undefined});
     SYNC.nom=j.nom;SYNC.role=j.role||"Utilisateur";try{sessionStorage.setItem("icompete_role",SYNC.role);sessionStorage.setItem("icompete_nom",SYNC.nom);}catch(e){}SYNC.ok=true;SYNC.err="";
     if(j.apprentis){EXTRA=j.apprentis;SYNC.appLoaded=true;try{DB.setItem("icompete_app_v1",JSON.stringify(EXTRA));}catch(e){}buildPeople();fillLists();}
     (j.contacts||[]).forEach(c=>{const l=contacts[c.id];
@@ -86,8 +87,13 @@ async function pull(full){
       const l=loc.get(uid),dirty=l&&SYNC.synced[uid]!==(l.maj||"");
       if(l&&dirty&&(l.maj||"")>(r.maj||""))out.push(l);else{out.push(r);SYNC.synced[uid]=r.maj||"";}
     });
-    loc.forEach((l,uid)=>{if(!srv.has(uid)&&(SYNC.synced[uid]===undefined||SYNC.synced[uid]!==(l.maj||"")))out.push(l);});
-    rows=out;saveLocal();persistSync();
+    if(delta&&j.partiel)loc.forEach((l,uid)=>{if(!srv.has(uid))out.push(l);});   // lecture partielle : on garde tout le reste
+    else loc.forEach((l,uid)=>{if(!srv.has(uid)&&(SYNC.synced[uid]===undefined||SYNC.synced[uid]!==(l.maj||"")))out.push(l);});
+    rows=out;
+    if(!(delta&&j.partiel))SYNC.lastFull=Date.now();
+    srv.forEach(r=>{if(r.maj&&r.maj>(SYNC.since||""))SYNC.since=r.maj;});
+    if(delta&&j.partiel&&typeof j.n==="number"&&j.n!==Object.keys(SYNC.synced).length)SYNC.lastFull=0;   // nombre différent : prochaine lecture complète
+    saveLocal();persistSync();
   }catch(e){
     SYNC.pulling=false;
     if(e.code==="code"){lostAccess();return;}

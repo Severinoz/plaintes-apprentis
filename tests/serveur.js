@@ -97,4 +97,10 @@ T("sauvegarde : vérification et restauration de l'onglet Plaintes",()=>{const e
   e.call("ADMIN-CODE-1",{action:"upsert",rows:[{uid:"b1",id:"1",nom:"Abîmé",desc:"x",maj:new Date(Date.now()+60000).toISOString()}]});
   e.ctx.restaurerPlaintes();assert.ok(e.copies.some(x=>/Avant restauration/.test(x)),"copie de sécurité faite");
   const noms=e.sheets.Plaintes.d.slice(1).map(r=>r[3]).sort();assert.deepStrictEqual(noms,["Aussi","Avant"]);});
+T("lecture partielle : seulement ce qui a changé depuis, plus le total",()=>{const e=env();
+  e.call("AGENT-1",{action:"upsert",rows:[{uid:"p1",id:"1",nom:"Un"},{uid:"p2",id:"2",nom:"Deux"}]});
+  const t=e.call("AGENT-1",{action:"list"});assert.strictEqual(t.plaintes.length,2);assert.strictEqual(t.n,2);assert.strictEqual(t.partiel,false);
+  const depuis=t.plaintes.map(x=>x.maj).sort().pop();
+  const r=e.call("AGENT-1",{action:"list",since:"2999-01-01T00:00:00.000Z"});assert.strictEqual(r.plaintes.length,0);assert.strictEqual(r.n,2);assert.strictEqual(r.partiel,true);
+  const r2=e.call("AGENT-1",{action:"list",since:"pas une date"});assert.strictEqual(r2.plaintes.length,2,"since invalide ignoré");ok(depuis);});
 console.log(n+" tests serveur réussis");
