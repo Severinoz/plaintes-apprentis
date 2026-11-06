@@ -153,7 +153,7 @@ $("tDetail").addEventListener("click",e=>{
     const fa=document.querySelector("#tFait input:checked");r.fait=fa?fa.value:"";delete r.steps;
     r.statut=$("tStatut").value;
     if(r.trans==="Oui"&&["Nouveau","En cours","En attente"].includes(r.statut)){if(ds.length===1&&ds[0]==="UGP")r.statut="Transmis à l'UGP";else if(ds.length===1&&ds[0]==="Cellule informatique de l'ACFPE")r.statut="Transmis à l'ACFPE";}
-    r.maj=new Date().toISOString();save();{const pg=progress(r);toast(pg.n&&pg.oui===pg.n&&r.statut!=="Clôturé"?"Traitement enregistré. Tous les problèmes sont réglés : penser à clôturer la plainte.":"Traitement enregistré.");}renderTrait();
+    r.maj=stampMaj(r.maj);save();{const pg=progress(r);toast(pg.n&&pg.oui===pg.n&&r.statut!=="Clôturé"?"Traitement enregistré. Tous les problèmes sont réglés : penser à clôturer la plainte.":"Traitement enregistré.");}renderTrait();
   }
 });
 

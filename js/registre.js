@@ -22,7 +22,7 @@ $("regBody").addEventListener("click",async e=>{
   if(o)openRow(o.dataset.o);
   if(c){const r=rows.find(x=>x.uid===c.dataset.c);if(!r)return;
     const k=await ask("Annuler la plainte ("+r.nature+") de "+r.nom+" ?\nElle reste dans le registre avec le statut Annulée.",[["Annuler la plainte","d"],["Retour",""]]);
-    if(k===0){r.statut="Annulée";r.maj=new Date().toISOString();save();renderRegistre();toast("Plainte annulée.");}}
+    if(k===0){r.statut="Annulée";r.maj=stampMaj(r.maj);save();renderRegistre();toast("Plainte annulée.");}}
 });
 
 /* export / import */

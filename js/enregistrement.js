@@ -5,7 +5,7 @@ function toRow(uid){
   if(p&&p.id!=null&&p.id!==""){contacts[String(p.id)]={tel:(F.tel||"").trim(),autre:(F.autre||"").trim()};saveContacts();}
   return {uid:uid||("u"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)),
     id:p?p.id:"",date:F.date||today(),nom:nomCourant(),ue:p?p.ue:F.ue,centre:p?p.centre:F.centre,metier:p?p.metier:F.metier,mar:p?p.mar:"",tel:(F.tel||"").trim(),autre:(F.autre||"").trim(),
-    nature:natStr(),gros:grosStr(),sous:sousStr(),prec:precStr(),ctr:F.ctr,desc:F.desc,statut:F.statut,carte:F.carte,paye:F.paye,chg:F.chg,contrat:F.contrat,res:F.res,integ:p?"":F.integ,maj:new Date().toISOString()};
+    nature:natStr(),gros:grosStr(),sous:sousStr(),prec:precStr(),ctr:F.ctr,desc:F.desc,statut:F.statut,carte:F.carte,paye:F.paye,chg:F.chg,contrat:F.contrat,res:F.res,integ:p?"":F.integ,maj:stampMaj((rows.find(x=>x.uid===uid)||{}).maj)};
 }
 $("bSave").onclick=async()=>{
   if(!nomCourant()){toast("Choisir d'abord l'apprenti.");$("q").focus();return;}
@@ -33,7 +33,7 @@ $("bCancel").onclick=async()=>{
   const c=await ask("Annuler la plainte ("+natStr()+") de "+nomCourant()+" ?\nElle reste dans le registre avec le statut Annulée.",[["Annuler la plainte","d"],["Retour",""]]);
   if(c!==0)return;
   const i=rows.findIndex(r=>r.uid===F.uid);
-  if(i>=0){rows[i].statut="Annulée";rows[i].maj=new Date().toISOString();save();}
+  if(i>=0){rows[i].statut="Annulée";rows[i].maj=stampMaj(rows[i].maj);save();}
   toast("Plainte annulée.");newForm();
 };
 
