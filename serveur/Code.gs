@@ -137,9 +137,10 @@ function doPost(e) {
     try {
       if (req.action === "upsert") {
         if ((req.rows || []).length > MAXROWS) return out_({ ok: false, err: "lot" });
-        var rows = upsertPlaintes_(req.rows || [], user, me.role);
+        var conflits = [];
+        var rows = upsertPlaintes_(req.rows || [], user, me.role, conflits);
         upsertContacts_(req.contacts || [], user);
-        return out_({ ok: true, rows: rows });
+        return out_({ ok: true, rows: rows, conflits: conflits });
       }
       if (req.action === "saveUser") {
         if (me.role !== "Administrateur") return out_({ ok: false, err: "droits" });
@@ -250,7 +251,7 @@ function readObjs_(name, keys) {
 }
 function toRow_(o, keys) { return keys.map(function (k) { var v = o[k]; return v == null ? "" : String(v); }); }
 
-function upsertPlaintes_(rows, user, role) {
+function upsertPlaintes_(rows, user, role, conflits) {
   var s = sh_("Plaintes"), last = s.getLastRow();
   var idx = {};
   var cur = {};
@@ -265,11 +266,17 @@ function upsertPlaintes_(rows, user, role) {
     if (!o) return;
     var ex = cur[o.uid];
     o.maj = clampMaj_(o.maj, nowIso);
-    if (ex && String(ex.maj || "") > o.maj) { result.push(ex); return; }   // la version du Sheet est plus récente
+    // Ancien site (sans "base") : on compare les horloges. Site à jour : "base" = version que l'agent avait reçue.
+    var hasBase = r.base !== undefined && r.base !== null;
+    if (ex && !hasBase && String(ex.maj || "") > o.maj) { result.push(ex); return; }
     o.par = ex ? ex.par : (role === "Administrateur" && o.par ? o.par : user);
     var d = diff_(ex, o, user, nowIso);
     if (ex && !d.length) { result.push(ex); return; }                      // rien n'a changé : on n'écrit pas
-    o.maj = nowIso;                                                        // l'heure du serveur fait foi
+    if (ex && hasBase && String(ex.maj || "") !== String(r.base)) {        // quelqu'un a modifié la plainte entre-temps : refus
+      if (conflits) conflits.push({ uid: ex.uid, id: ex.id, nom: ex.nom, par: ex.majPar, maj: ex.maj });
+      result.push(ex); return;
+    }
+    o.maj = (ex && ex.maj && nowIso <= ex.maj) ? new Date(Date.parse(ex.maj) + 1).toISOString() : nowIso;   // l'heure du serveur fait foi, toujours strictement croissante
     o.majPar = user;
     lines = lines.concat(d);
     if (ex) {

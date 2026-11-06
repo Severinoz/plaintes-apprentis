@@ -68,3 +68,9 @@ Après chaque changement de `serveur/Code.gs` : le coller dans Apps Script, puis
 - Codes : 10 caractères minimum. Un code plus court est accepté avec un avertissement jusqu'au 20/11/2026 (CODE_COURT_REFUSE_APRES dans Code.gs), refusé ensuite (réponse "faible").
 - Faux codes : chaque échec est ralenti. À 30 échecs en 10 minutes, un e-mail d'alerte est envoyé au propriétaire du script (au plus un par heure). À 200 échecs en 1 heure, les codes jamais validés récemment sont bloqués (les sessions déjà validées continuent). Lancer une fois `autoriserAlertes()` pour autoriser l'envoi d'e-mails.
 - Envoi : le site envoie les modifications par paquets de 200 lignes (réduits automatiquement si le serveur répond "lot"). Import CSV limité à 2000 lignes.
+
+## Lot 2 (modifications simultanées)
+- Le site envoie, avec chaque plainte, la version qu'il avait reçue (`base`). Si le serveur a une version différente (quelqu'un d'autre a modifié la plainte entre-temps), la modification est refusée, la version à jour est renvoyée avec le nom de l'auteur et l'heure (`conflits`), et l'agent voit un message jusqu'à ce qu'il clique « J'ai compris ».
+- Si le contenu envoyé est identique à celui du serveur, il n'y a pas de conflit.
+- Les anciens sites (sans `base`) continuent de marcher avec l'ancienne règle (comparaison des horloges).
+- La date de modification serveur est strictement croissante pour une même plainte.

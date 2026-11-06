@@ -29,6 +29,7 @@ function env(){
   const call=(code,body)=>JSON.parse(ctx.doPost({postData:{contents:JSON.stringify(Object.assign({code},body))}}).s);
   return {ctx,sheets,call,cache,bk,copies,bkfiles,mails,mkSheet,sleeps:()=>sleeps};
 }
+const PKI=k=>['uid','id','date','nom','ue','centre','metier','mar','tel','autre','gros','sous','prec','nature','desc','statut','carte','paye','ctr','chg','contrat','integ','res','fait','voeu','trans','dest','destAutre','transDate','par','majPar','maj','suivi'].indexOf(k);
 const ok=(c,m)=>assert.ok(c,m);let n=0;const T=(nom,f)=>{f();n++;console.log("ok -",nom);};
 T("connexion avec code valide, refus avec code faux (et ralentissement)",()=>{const e=env();
   assert.strictEqual(e.call("AGENT-1",{action:"login"}).ok,true);
@@ -68,6 +69,16 @@ T("une version plus récente du Sheet n'est pas écrasée",()=>{const e=env();
   e.call("AGENT-1",{action:"upsert",rows:[{uid:"c1",nom:"V2",maj:"2026-10-02T00:00:00.000Z"}]});
   const r=e.call("ADMIN-CODE-1",{action:"upsert",rows:[{uid:"c1",nom:"V1",maj:"2026-10-01T00:00:00.000Z"}]});
   assert.strictEqual(r.rows[0].nom,"V2");});
+T("modification simultanée : refusée si la plainte a changé depuis la version reçue, agent prévenu",()=>{const e=env();
+  const a=e.call("AGENT-1",{action:"upsert",rows:[{uid:"k1",id:"5",nom:"Kim",statut:"Nouveau",desc:"v1"}]}).rows[0];
+  const b=e.call("ADMIN-CODE-1",{action:"upsert",rows:[{uid:"k1",id:"5",nom:"Kim",statut:"En cours",desc:"v1",base:a.maj}]});
+  assert.strictEqual(b.conflits.length,0,"base à jour : accepté");const v2=b.rows[0];assert.strictEqual(v2.statut,"En cours");
+  const c=e.call("AGENT-1",{action:"upsert",rows:[{uid:"k1",id:"5",nom:"Kim",statut:"Nouveau",desc:"v1 modifié par Agent",base:a.maj}]});
+  assert.strictEqual(c.conflits.length,1,"base périmée : refusé");assert.strictEqual(c.conflits[0].par,"Admin","on dit qui a modifié");
+  assert.strictEqual(c.rows[0].desc,"v1","la version à jour est renvoyée");
+  assert.strictEqual(e.sheets.Plaintes.d[1][PKI("desc")],"v1","rien d'écrit dans le Sheet");assert.strictEqual(e.sheets.Plaintes.d[1][PKI("statut")],"En cours");
+  const d=e.call("AGENT-1",{action:"upsert",rows:[Object.assign({},v2,{base:a.maj})]});assert.strictEqual(d.conflits.length,0,"même contenu : pas de conflit");
+  const f=e.call("AGENT-1",{action:"upsert",rows:[{uid:"k1",id:"5",nom:"Kim",statut:"Clôturé",desc:"v1",base:v2.maj}]});assert.strictEqual(f.conflits.length,0);assert.strictEqual(f.rows[0].statut,"Clôturé","après rechargement, la modification passe");});
 T("limite d'essais : alerte e-mail à 30 échecs, blocage de secours à 200, sessions validées conservées",()=>{const e=env();
   e.call("AGENT-1",{action:"login"});
   for(let i=0;i<29;i++)e.call("FAUX"+i,{action:"login"});

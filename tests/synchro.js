@@ -3,13 +3,13 @@
 const {chromium}=require('playwright');const path=require('path');const assert=require('assert');
 (async()=>{
   const N=1500;let srv=[];for(let i=0;i<N;i++)srv.push({uid:"t"+i,id:String(i),date:"2026-10-01",nom:"A "+i,statut:"Nouveau",maj:new Date(Date.UTC(2026,9,1,0,0,i%60,i)).toISOString(),majPar:"T"});
-  const reqs=[];const batches=[];let limit=500;
+  const reqs=[];const batches=[];let limit=500;let forceConflict=null;const bases=[];
   const b=await chromium.launch();const p=await b.newPage();const err=[];p.on('pageerror',e=>err.push(String(e)));
   await p.route('**/script.google.com/**',async r=>{
     const body=JSON.parse(r.request().postData());let out={ok:true,nom:"Test",role:"Administrateur"};
     if(body.action==="list"){const pl=body.since?srv.filter(x=>x.maj>=body.since):srv;reqs.push({since:body.since,n:pl.length});
       out={ok:true,nom:"Test",role:"Administrateur",plaintes:pl,contacts:[],n:srv.length,partiel:!!body.since,apprentis:null};}
-    if(body.action==="upsert"){if(body.rows.length>limit)out={ok:false,err:"lot"};else{batches.push(body.rows.length);
+    if(body.action==="upsert"){if(body.rows.length>limit)out={ok:false,err:"lot"};else if(forceConflict&&body.rows.some(x=>x.uid===forceConflict)){bases.push(body.rows.find(x=>x.uid===forceConflict).base);const sv=Object.assign({},srv.find(x=>x.uid===forceConflict),{statut:"Traité",majPar:"Collègue",maj:"2026-11-06T09:00:00.000Z"});out={ok:true,rows:[sv],conflits:[{uid:sv.uid,id:sv.id,nom:sv.nom,par:"Collègue",maj:sv.maj}]};forceConflict=null;}else{batches.push(body.rows.length);
       out={ok:true,rows:body.rows.map(x=>{const y=Object.assign({},x,{maj:new Date(Date.now()+1000).toISOString()});const i=srv.findIndex(z=>z.uid===x.uid);if(i>=0)srv[i]=y;else srv.push(y);return y;}),contacts:[]};}}
     await r.fulfill({status:200,contentType:"application/json",headers:{"access-control-allow-origin":"*"},body:JSON.stringify(out)});});
   await p.goto('file://'+path.resolve(__dirname,'..','index.html'));await p.waitForSelector('#lgCode',{state:'visible'});
@@ -41,6 +41,12 @@ const {chromium}=require('playwright');const path=require('path');const assert=r
   limit=60;batches.length=0;const nd2=await dirty();await p.evaluate(()=>{SYNC.chunk=200;flush();});await p.waitForTimeout(1500);
   ok(Math.max(...batches)<=60);assert.strictEqual(batches.reduce((a,b)=>a+b,0),nd2,'tout envoyé malgré la limite');
   assert.strictEqual(await p.evaluate(()=>pendingN()),0,'plus rien en attente');ok('refus "lot" : taille réduite automatiquement, rien perdu');
+  // conflit : un collègue a modifié la même plainte, l'agent est prévenu et voit la version à jour
+  limit=500;await p.evaluate(()=>{rows.forEach(r=>{SYNC.synced[r.uid]=r.maj;});const r=rows.find(x=>x.uid==="t3");r.statut="Rejeté";r.maj=new Date(Date.now()+5000).toISOString();});
+  forceConflict="t3";await p.evaluate(()=>flush());await p.waitForSelector('#conflit',{timeout:5000});
+  assert.ok(bases[0],'le site envoie la version de base');const txt=await p.textContent('#conflit');assert.ok(/Collègue/.test(txt)&&/A 3/.test(txt),'message : '+txt.slice(0,120));
+  assert.strictEqual(await p.evaluate(()=>rows.find(r=>r.uid==="t3").statut),"Traité",'version du collègue affichée');ok('conflit : refus, avertissement avec le nom du collègue, version à jour affichée');
+  await p.click('#conflit button');assert.strictEqual(await p.$('#conflit'),null);
   assert.deepStrictEqual(err,[],'aucune erreur JavaScript');
   await b.close();console.log('synchronisation : tests réussis');
 })().catch(e=>{console.error('ECHEC :',e.message);process.exit(1);});

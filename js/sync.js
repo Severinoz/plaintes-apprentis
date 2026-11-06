@@ -31,6 +31,19 @@ function showLogin(msg){$("login").hidden=false;$("lgErr").textContent=msg||"";s
 function wipeSession(){try{Object.keys(sessionStorage).filter(k=>k.indexOf("icompete_")===0).forEach(k=>sessionStorage.removeItem(k));}catch(e){}}
 /* Accès refusé : on efface la session de l'onglet (les saisies non envoyées restent gardées au nom de leur auteur) puis on recharge. */
 function lostAccess(){savePending();wipeSession();try{sessionStorage.setItem("icompete_msg","Code incorrect ou accès désactivé.");}catch(e){}location.reload();}
+/* Une autre personne a modifié la même plainte avant l'envoi : la modification n'est pas enregistrée, la version à jour est affichée. */
+function alerteConflit(l){
+  const old=document.getElementById("conflit");if(old)old.remove();
+  const d=document.createElement("div");d.id="conflit";d.className="conflit";d.setAttribute("role","alert");
+  const h=m=>{try{return new Date(m).toLocaleString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});}catch(e){return "";}};
+  const t=document.createElement("strong");t.textContent=l.length>1?"Ces plaintes avaient déjà été modifiées par quelqu'un d'autre. Vos modifications n'ont pas été enregistrées :":"Cette plainte avait déjà été modifiée par quelqu'un d'autre. Votre modification n'a pas été enregistrée :";d.appendChild(t);
+  const ul=document.createElement("ul");l.slice(0,10).forEach(c=>{const li=document.createElement("li");li.textContent=(c.nom||"Plainte")+(c.id?" (n° "+c.id+")":"")+" : modifiée par "+(c.par||"un collègue")+(c.maj?" le "+h(c.maj):"")+".";ul.appendChild(li);});
+  if(l.length>10){const li=document.createElement("li");li.textContent="et "+(l.length-10)+" autre(s).";ul.appendChild(li);}
+  d.appendChild(ul);
+  const p=document.createElement("p");p.textContent="La version à jour est maintenant affichée. Vérifiez-la et refaites votre modification si elle est toujours nécessaire.";d.appendChild(p);
+  const b=document.createElement("button");b.type="button";b.textContent="J'ai compris";b.onclick=()=>d.remove();d.appendChild(b);
+  document.body.appendChild(d);
+}
 async function flush(){
   if(!SYNC.on||!SYNC.ok||SYNC.busy||SYNC.pulling||SYNC.readonly)return;
   const dr=rows.filter(r=>SYNC.synced[r.uid]!==(r.maj||""));
@@ -41,13 +54,14 @@ async function flush(){
   const sentC={};dc.forEach(id=>sentC[id]=JSON.stringify(contacts[id]));
   try{
     // Envoi par paquets : le serveur refuse plus de 500 lignes d'un coup ; en cas de refus "lot" on réduit la taille.
-    let first=true;
+    let first=true;const conflitsAll=[];
     for(let i=0;i<dr.length||first;){
-      const part=dr.slice(i,i+SYNC.chunk);
+      const part=dr.slice(i,i+SYNC.chunk).map(r=>Object.assign({},r,{base:SYNC.synced[r.uid]||""}));
       let j;
       try{j=await api({action:"upsert",rows:part,contacts:first?dc.map(id=>Object.assign({id},contacts[id])):[]});}
       catch(e){if(e.code==="lot"&&SYNC.chunk>10){SYNC.chunk=Math.max(10,Math.floor(SYNC.chunk/2));continue;}throw e;}
       first=false;i+=part.length;
+      if((j.conflits||[]).length)conflitsAll.push(...j.conflits);
       (j.rows||[]).forEach(sv=>{
         const k=rows.findIndex(x=>x.uid===sv.uid);
         if(k>=0&&(rows[k].maj||"")===sent.get(sv.uid))rows[k]=sv;
@@ -57,6 +71,7 @@ async function flush(){
     }
     dc.forEach(id=>{SYNC.sc[id]=sentC[id];});
     saveLocal();persistSync();SYNC.err="";
+    if(conflitsAll.length){alerteConflit(conflitsAll);refreshViews();}
   }catch(e){
     if(e.code==="code"){SYNC.busy=false;lostAccess();return;}
     if(e.code==="droits"){SYNC.busy=false;SYNC.readonly=true;toast("Votre compte est en lecture seule : modification non enregistrée.");applyRole();status();return;}

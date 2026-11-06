@@ -153,3 +153,8 @@ dialog .row{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
 .loginov input{width:100%;margin:8px 0}
 #lgErr{color:var(--danger);min-height:22px;font-weight:600}
 .sugg .cnt{padding:7px 12px;font-size:12.5px;color:var(--muted);border-bottom:1px solid var(--line);background:var(--primary-soft);position:sticky;top:0}
+
+.conflit{position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:60;max-width:min(560px,92vw);background:#fff4e5;border:2px solid #c25e00;border-radius:10px;padding:14px 16px;box-shadow:0 6px 24px rgba(0,0,0,.25);font-size:14px;color:#3a2200}
+.conflit ul{margin:8px 0 8px 18px;padding:0}
+.conflit p{margin:6px 0 10px}
+.conflit button{background:#c25e00;color:#fff;border:0;border-radius:6px;padding:8px 14px;cursor:pointer;font:inherit}
