@@ -17,6 +17,8 @@ let mem = null;
 function load(){try{const v=DB.getItem(KEY);if(v){rows=JSON.parse(v)||[];return}}catch(e){} if(mem)rows=mem;}
 function saveLocal(){mem=rows;let ok=true;try{DB.setItem(KEY,JSON.stringify(rows));}catch(e){ok=false;}savePending();return ok;}
 /* Saisies non envoyées : gardées sur l'appareil au nom de leur auteur, rechargées seulement pour lui, supprimées après 14 jours. */
+/* Horodatage toujours supérieur au précédent, même si l'horloge du téléphone retarde. */
+function stampMaj(prev){let t=Date.now();const p=Date.parse(prev||"");if(p&&t<=p)t=p+1;return new Date(t).toISOString();}
 const PKEY="icompete_pending_v1";
 function pendRead(){try{return JSON.parse(localStorage.getItem(PKEY)||"{}")||{};}catch(e){return {};}}
 function savePending(){

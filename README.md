@@ -56,4 +56,8 @@ Le test de charge simule le serveur, vérifie la connexion, le nombre de plainte
 Le script serveur (`Code.gs`) se modifie séparément dans Google Apps Script, puis se redéploie en nouvelle version.
 
 
-Après chaque changement de `serveur/Code.gs` : le coller dans Apps Script, puis Déployer > Gérer les déploiements > Nouvelle version. Une seule fois : exécuter `chiffrerCodes()` et `installerSauvegarde()`.
+Historique : chaque création ou modification d'une plainte ajoute une ligne par champ modifié dans l'onglet `Historique` du Sheet (date du serveur, personne, avant, après). Un renvoi sans changement n'écrit rien. L'heure de modification (`maj`) est posée par le serveur.
+
+Sauvegardes : une copie du Sheet chaque jour à 5h (14 conservées). `verifierSauvegarde()` compare la dernière copie au Sheet actuel. `restaurerPlaintes()` remet l'onglet Plaintes dans l'état de la dernière copie, après avoir fait une copie « Avant restauration ».
+
+Après chaque changement de `serveur/Code.gs` : le coller dans Apps Script, puis Déployer > Gérer les déploiements > Nouvelle version. Une seule fois : `chiffrerCodes()` ; `installerSauvegarde()` à relancer après cette mise à jour (passage à une copie quotidienne).

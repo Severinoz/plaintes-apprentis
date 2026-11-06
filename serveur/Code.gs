@@ -10,19 +10,74 @@ function hash_(c) {
   return Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(c || "").trim().toLowerCase()));
 }
 
-/* Sauvegarde hebdomadaire : copie du Sheet dans Drive, on garde les 8 dernières.
+/* Sauvegarde quotidienne : copie du Sheet dans Drive, on garde les 14 dernières.
    À lancer une seule fois : exécuter installerSauvegarde (autoriser l'accès à Drive). */
+var BKP = "Sauvegarde plaintes apprentis ", BKP_GARDER = 14;
 function sauvegarde() {
-  var d = Utilities.formatDate(new Date(), "Africa/Bangui", "yyyy-MM-dd");
-  DriveApp.getFileById(SSID).makeCopy("Sauvegarde plaintes apprentis " + d);
-  var it = DriveApp.searchFiles('title contains "Sauvegarde plaintes apprentis " and trashed = false'), l = [];
+  var d = Utilities.formatDate(new Date(), "Africa/Bangui", "yyyy-MM-dd HH:mm");
+  DriveApp.getFileById(SSID).makeCopy(BKP + d);
+  var l = sauvegardes_();
+  for (var i = BKP_GARDER; i < l.length; i++) l[i].f.setTrashed(true);
+}
+function sauvegardes_() {
+  var it = DriveApp.searchFiles('title contains "' + BKP + '" and trashed = false'), l = [];
   while (it.hasNext()) { var f = it.next(); l.push({ f: f, t: f.getDateCreated().getTime() }); }
   l.sort(function (x, y) { return y.t - x.t; });
-  for (var i = 8; i < l.length; i++) l[i].f.setTrashed(true);
+  return l;
 }
 function installerSauvegarde() {
   ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === "sauvegarde") ScriptApp.deleteTrigger(t); });
-  ScriptApp.newTrigger("sauvegarde").timeBased().onWeekDay(ScriptApp.WeekDay.MONDAY).atHour(6).create();
+  ScriptApp.newTrigger("sauvegarde").timeBased().everyDays(1).atHour(5).create();
+  sauvegarde();
+}
+/* Test de la sauvegarde : compare le nombre de lignes de la dernière copie avec le Sheet actuel.
+   Exécuter verifierSauvegarde puis lire le journal d'exécution. */
+function verifierSauvegarde() {
+  var l = sauvegardes_();
+  if (!l.length) { Logger.log("ECHEC : aucune sauvegarde trouvée"); return false; }
+  var copie = SpreadsheetApp.openById(l[0].f.getId()), ok = true;
+  ["Plaintes", "Contacts", "Apprentis", "Utilisateurs"].forEach(function (n) {
+    var a = copie.getSheetByName(n), b = sh_(n);
+    var ra = a ? a.getLastRow() : -1, rb = b ? b.getLastRow() : -1;
+    Logger.log(n + " : sauvegarde " + ra + " lignes, actuel " + rb + " lignes" + (ra > rb ? "  <-- ATTENTION" : ""));
+    if (!a || ra < 1) ok = false;
+  });
+  Logger.log((ok ? "OK" : "ECHEC") + " : sauvegarde du " + l[0].f.getName());
+  return ok;
+}
+/* Restauration : remet l'onglet Plaintes tel qu'il était dans la dernière sauvegarde.
+   Une copie de sécurité "Avant restauration" est faite d'abord. Exécuter restaurerPlaintes. */
+function restaurerPlaintes() {
+  var l = sauvegardes_();
+  if (!l.length) { Logger.log("ECHEC : aucune sauvegarde"); return false; }
+  DriveApp.getFileById(SSID).makeCopy("Avant restauration " + Utilities.formatDate(new Date(), "Africa/Bangui", "yyyy-MM-dd HH:mm"));
+  var src = SpreadsheetApp.openById(l[0].f.getId()).getSheetByName("Plaintes"), dst = sh_("Plaintes");
+  var n = src.getLastRow();
+  if (dst.getLastRow() > 1) dst.getRange(2, 1, dst.getLastRow() - 1, PK.length).clearContent();
+  if (n > 1) { var rg = dst.getRange(2, 1, n - 1, PK.length); rg.setNumberFormat("@"); rg.setValues(src.getRange(2, 1, n - 1, PK.length).getDisplayValues()); }
+  Logger.log("Plaintes restaurées depuis " + l[0].f.getName() + " : " + Math.max(n - 1, 0) + " lignes");
+  return true;
+}
+
+/* Historique : une ligne par champ modifié (date du serveur, personne, plainte, champ, avant, après). */
+var HK = ["Date", "Utilisateur", "Action", "Plainte", "Apprenti", "Champ", "Avant", "Après"];
+var HISTO_SKIP = { maj: 1, majPar: 1, par: 1 };
+function histo_(lines) {
+  if (!lines.length) return;
+  var ss = SpreadsheetApp.getActiveSpreadsheet() || SpreadsheetApp.openById(SSID), s = ss.getSheetByName("Historique");
+  if (!s) { s = ss.insertSheet("Historique"); s.getRange(1, 1, 1, HK.length).setValues([HK]); }
+  var start = Math.max(s.getLastRow(), 1) + 1, rg = s.getRange(start, 1, lines.length, HK.length);
+  rg.setNumberFormat("@"); rg.setValues(lines);
+}
+function diff_(ex, o, user, now) {
+  var out = [], act = ex ? "Modification" : "Création";
+  if (!ex) { out.push([now, user, act, o.uid, o.id + " " + o.nom, "(nouvelle plainte)", "", ""]); return out; }
+  PK.forEach(function (k) {
+    if (HISTO_SKIP[k]) return;
+    var a = String(ex[k] == null ? "" : ex[k]), b = String(o[k] == null ? "" : o[k]);
+    if (a !== b) out.push([now, user, act, o.uid, o.id + " " + o.nom, k, a.slice(0, 300), b.slice(0, 300)]);
+  });
+  return out;
 }
 
 function doGet() { return out_({ ok: true, msg: "Passerelle plaintes apprentis active" }); }
@@ -171,7 +226,7 @@ function upsertPlaintes_(rows, user, role) {
     var all = s.getRange(2, 1, last - 1, PK.length).getDisplayValues();
     all.forEach(function (r, i) { idx[r[0]] = i + 2; var o = {}; PK.forEach(function (k, j) { o[k] = r[j]; }); cur[r[0]] = o; });
   }
-  var result = [], toAppend = [], nowIso = new Date().toISOString();
+  var result = [], toAppend = [], nowIso = new Date().toISOString(), lines = [];
   rows.forEach(function (r) {
     if (!r) return;
     var o = clean_(r);
@@ -180,7 +235,11 @@ function upsertPlaintes_(rows, user, role) {
     o.maj = clampMaj_(o.maj, nowIso);
     if (ex && String(ex.maj || "") > o.maj) { result.push(ex); return; }   // la version du Sheet est plus récente
     o.par = ex ? ex.par : (role === "Administrateur" && o.par ? o.par : user);
+    var d = diff_(ex, o, user, nowIso);
+    if (ex && !d.length) { result.push(ex); return; }                      // rien n'a changé : on n'écrit pas
+    o.maj = nowIso;                                                        // l'heure du serveur fait foi
     o.majPar = user;
+    lines = lines.concat(d);
     if (ex) {
       var rg = s.getRange(idx[o.uid], 1, 1, PK.length);
       rg.setNumberFormat("@"); rg.setValues([toRow_(o, PK)]);
@@ -195,6 +254,7 @@ function upsertPlaintes_(rows, user, role) {
     var rg2 = s.getRange(start, 1, toAppend.length, PK.length);
     rg2.setNumberFormat("@"); rg2.setValues(toAppend.map(function (o) { return toRow_(o, PK); }));
   }
+  histo_(lines);
   return result;
 }
 
