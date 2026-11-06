@@ -78,3 +78,6 @@ Après chaque changement de `serveur/Code.gs` : le coller dans Apps Script, puis
 ## Validation des ajouts (N3)
 - Ajout d'apprenti : le serveur n'accepte qu'une liste, avec un numéro de 60 caractères au plus (sans caractère de contrôle, ne commençant pas par = + @ -). Chaque champ est plafonné à 200 caractères, la base à 20 000 lignes. Sinon réponse "invalide".
 - Contacts : identifiant de même forme que celui des plaintes, téléphone 100 caractères, autre numéro 300, 500 contacts au plus par envoi. Les entrées mal formées sont ignorées.
+
+## Tests automatiques (S4)
+À chaque envoi sur `main` et chaque pull request, GitHub Actions lance `npm test` (tests serveur, sécurité, synchro, charge) dans `.github/workflows/tests.yml`. Un échec apparaît en rouge dans l'onglet Actions du dépôt. En local : `npm install`, `npx playwright install chromium`, puis `npm test`.

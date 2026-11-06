@@ -1,0 +1,13 @@
+{
+  "name": "plaintes-apprentis",
+  "private": true,
+  "description": "Outil de gestion des plaintes des apprentis (I-COMPETE)",
+  "scripts": {
+    "test:serveur": "node tests/serveur.js",
+    "test:securite": "node tests/securite.js",
+    "test:synchro": "node tests/synchro.js",
+    "test:charge": "node tests/charge.js",
+    "test": "npm run test:serveur && npm run test:securite && npm run test:synchro && npm run test:charge"
+  },
+  "devDependencies": { "playwright": "1.56.0" }
+}
