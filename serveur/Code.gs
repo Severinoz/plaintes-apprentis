@@ -147,7 +147,7 @@ function doPost(e) {
         return out_(saveUser_(req.user || {}, user));
       }
       if (req.action === "addApprenti") {
-        return out_({ ok: addApprenti_(req.apprenti || [], user) });
+        return addApprenti_(req.apprenti || [], user) ? out_({ ok: true }) : out_({ ok: false, err: "invalide" });
       }
     } finally { lock.releaseLock(); }
     return out_({ ok: false, err: "action" });
@@ -199,7 +199,7 @@ function chiffrerCodes() {
 }
 
 /* ---- Validation des plaintes reçues ---- */
-var LIM = { desc: 5000, suivi: 20000, prec: 2000, sous: 2000, gros: 1000, nature: 1000 }, LIMD = 300, MAXROWS = 500;
+var LIM = { desc: 5000, suivi: 20000, prec: 2000, sous: 2000, gros: 1000, nature: 1000 }, LIMD = 300, MAXROWS = 500, MAXAPP = 20000;
 function clean_(r) {
   var o = {};
   PK.forEach(function (k) { var v = r[k] == null ? "" : String(r[k]), lim = LIM[k] || LIMD; o[k] = v.length > lim ? v.slice(0, lim) : v; });
@@ -298,26 +298,30 @@ function upsertPlaintes_(rows, user, role, conflits) {
 }
 
 function upsertContacts_(list, user) {
-  if (!list.length) return;
+  if (!Array.isArray(list) || !list.length) return;
+  list = list.slice(0, MAXROWS);
   var s = sh_("Contacts"), last = s.getLastRow(), idx = {};
   if (last >= 2) s.getRange(2, 1, last - 1, 1).getDisplayValues().forEach(function (r, i) { idx[r[0]] = i + 2; });
   var now = new Date().toISOString();
   list.forEach(function (c) {
-    if (!c || !c.id) return;
-    var row = [String(c.id), String(c.tel || ""), String(c.autre || ""), now, user];
+    if (!c || typeof c !== "object" || !/^[A-Za-z0-9_-]{1,60}$/.test(String(c.id || ""))) return;   // identifiant invalide : ignoré
+    var row = [String(c.id), String(c.tel || "").slice(0, 100), String(c.autre || "").slice(0, 300), now, user];
     if (idx[c.id]) { var rg = s.getRange(idx[c.id], 1, 1, 5); rg.setNumberFormat("@"); rg.setValues([row]); }
     else { var n = Math.max(s.getLastRow(), 1) + 1; var rg2 = s.getRange(n, 1, 1, 5); rg2.setNumberFormat("@"); rg2.setValues([row]); idx[c.id] = n; }
   });
 }
 
 function addApprenti_(a, user) {
-  if (!a.length || !String(a[0]).trim()) return false;
-  var s = sh_("Apprentis"), last = s.getLastRow(), id = String(a[0]).trim();
+  if (!Array.isArray(a) || !a.length || !String(a[0]).trim()) return false;
+  var id = String(a[0]).trim();
+  if (id.length > 60 || /[\u0000-\u001f]/.test(id) || /^[=+@-]/.test(id)) return false;                  // numéro d'apprenti invalide
+  var s = sh_("Apprentis"), last = s.getLastRow();
+  if (last > MAXAPP) return false;                                           // plafond de sécurité
   if (last >= 2) {
     var ids = s.getRange(2, 1, last - 1, 1).getDisplayValues();
     for (var i = 0; i < ids.length; i++) if (String(ids[i][0]).trim() === id) return true;
   }
-  var row = []; for (var j = 0; j < 10; j++) row.push(a[j] == null ? "" : String(a[j]));
+  var row = []; for (var j = 0; j < 10; j++) row.push(a[j] == null ? "" : String(a[j]).slice(0, 200));
   row.push(user);
   var n = Math.max(s.getLastRow(), 1) + 1, rg = s.getRange(n, 1, 1, 11);
   rg.setNumberFormat("@"); rg.setValues([row]);

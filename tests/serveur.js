@@ -79,6 +79,18 @@ T("modification simultanée : refusée si la plainte a changé depuis la version
   assert.strictEqual(e.sheets.Plaintes.d[1][PKI("desc")],"v1","rien d'écrit dans le Sheet");assert.strictEqual(e.sheets.Plaintes.d[1][PKI("statut")],"En cours");
   const d=e.call("AGENT-1",{action:"upsert",rows:[Object.assign({},v2,{base:a.maj})]});assert.strictEqual(d.conflits.length,0,"même contenu : pas de conflit");
   const f=e.call("AGENT-1",{action:"upsert",rows:[{uid:"k1",id:"5",nom:"Kim",statut:"Clôturé",desc:"v1",base:v2.maj}]});assert.strictEqual(f.conflits.length,0);assert.strictEqual(f.rows[0].statut,"Clôturé","après rechargement, la modification passe");});
+T("ajout d'apprenti et contacts : validation des entrées",()=>{const e=env();
+  assert.strictEqual(e.call("AGENT-1",{action:"addApprenti",apprenti:["AJ1","Nom","UE","Centre","Métier","","7212","",""]}).ok,true);
+  assert.strictEqual(e.sheets.Apprentis.d.length,2);assert.strictEqual(e.sheets.Apprentis.d[1][10],"Agent");
+  assert.strictEqual(e.call("AGENT-1",{action:"addApprenti",apprenti:["AJ1","Autre nom"]}).ok,true,"doublon : pas de seconde ligne");assert.strictEqual(e.sheets.Apprentis.d.length,2);
+  assert.strictEqual(e.call("AGENT-1",{action:"addApprenti",apprenti:["=1+1","N"]}).err,"invalide","id commençant par =");
+  assert.strictEqual(e.call("AGENT-1",{action:"addApprenti",apprenti:["Kobo 12/é","N"]}).ok,true,"id existant avec espace et accent accepté");
+  assert.strictEqual(e.call("AGENT-1",{action:"addApprenti",apprenti:"AJ2N"}).err,"invalide","texte au lieu d'une liste");
+  assert.strictEqual(e.call("AGENT-1",{action:"addApprenti",apprenti:["A".repeat(61),"N"]}).err,"invalide","id trop long");
+  e.call("AGENT-1",{action:"addApprenti",apprenti:["AJ3","N".repeat(500)]});assert.strictEqual(e.sheets.Apprentis.d[3][1].length,200,"champ plafonné");
+  e.call("AGENT-1",{action:"upsert",rows:[],contacts:[{id:"c1",tel:"7".repeat(500),autre:"x"},{id:"=bad id"},{id:""},"texte",null]});
+  assert.strictEqual(e.sheets.Contacts.d.length,2,"seul le contact valide est écrit");assert.strictEqual(e.sheets.Contacts.d[1][1].length,100,"téléphone plafonné");
+  assert.strictEqual(e.call("AGENT-1",{action:"upsert",rows:[],contacts:"pas une liste"}).ok,true,"contacts mal formés ignorés sans erreur");});
 T("limite d'essais : alerte e-mail à 30 échecs, blocage de secours à 200, sessions validées conservées",()=>{const e=env();
   e.call("AGENT-1",{action:"login"});
   for(let i=0;i<29;i++)e.call("FAUX"+i,{action:"login"});

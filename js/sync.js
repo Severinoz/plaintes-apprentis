@@ -145,7 +145,7 @@ $("bAdd").onclick=async()=>{
   const id=$("iId").value.trim()||("AJ"+Date.now().toString(36).toUpperCase());
   if(people.some(p=>String(p.id)===id)){const c=await ask("Cet ID existe déjà dans la base. Remplacer ses informations par celles saisies ?",[["Remplacer","p"],["Retour",""]]);if(c!==0)return;}
   const a=[id,nom,F.ue.trim(),F.centre.trim(),F.metier.trim(),$("iMar").value.trim(),(F.tel||"").trim(),(F.autre||"").trim(),"",""];
-  try{await api({action:"addApprenti",apprenti:a});}catch(e){if(e.code==="code")lostAccess();else toast("Ajout impossible : vérifier la connexion.");return;}
+  try{await api({action:"addApprenti",apprenti:a});}catch(e){if(e.code==="code")lostAccess();else toast(e.code==="invalide"?"Numéro d'apprenti invalide : 60 caractères au plus, sans commencer par = + @ ou -.":e.code==="droits"?"Votre compte est en lecture seule.":"Ajout impossible : vérifier la connexion.");return;}
   EXTRA=EXTRA.filter(r=>String(r[0])!==id).concat([a]);buildPeople();fillLists();
   const p=people.find(x=>String(x.id)===id);
   if(p){F.p=p;F.libre="";$("iId").value="";$("iMar").value="";renderApprenti();toast("Apprenti ajouté à la base partagée.");}
