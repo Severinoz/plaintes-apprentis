@@ -34,7 +34,7 @@ const KEY = "icompete_plaintes_v1";
 const SEEDKEY = "icompete_plaintes_seed_v1";
 const SHEET_URL = "https://script.google.com/macros/s/AKfycbyZicCHLGD1_DKnNREw4X-Mpx-DCJ2n8Bsz-mQelJGuBaIXOkhrjmgI-lNe-GrA04JtdA/exec";
 let SU = SHEET_URL; try{ SU = SU || localStorage.getItem("icompete_sheet_url") || ""; }catch(e){}
-const SYNC = {on:!!SU, role:"", ok:false, busy:false, pulling:false, nom:"", code:"", synced:{}, sc:{}, err:""};
+const SYNC = {on:!!SU, role:"", ok:false, busy:false, pulling:false, nom:"", code:"", synced:{}, sc:{}, err:"", chunk:200};
 /* Avec la base partagée, les données de travail restent dans la session de l'onglet (sessionStorage) :
    elles disparaissent à la fermeture. Seules les saisies non envoyées sont gardées dans localStorage, au nom de leur auteur. */
 const DB=(()=>{try{return SYNC.on?sessionStorage:localStorage;}catch(e){return localStorage;}})();

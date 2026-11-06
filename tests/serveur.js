@@ -13,10 +13,11 @@ function env(){
   const PK=["uid","id","date","nom","ue","centre","metier","mar","tel","autre","gros","sous","prec","nature","desc","statut","carte","paye","ctr","chg","contrat","integ","res","fait","voeu","trans","dest","destAutre","transDate","par","majPar","maj","suivi"];
   const sheets={Utilisateurs:mkSheet(["Nom","Code","Actif","Rôle"],[["Admin","ADMIN-CODE-1","Oui","Administrateur"],["Agent","AGENT-1","Oui","Utilisateur"],["Lecteur","LECT-1","Oui","Lecture"]]),
     Plaintes:mkSheet(PK),Contacts:mkSheet(["id","tel","autre","maj","par"]),Apprentis:mkSheet(["id","nom","ue","centre","metier","mar","tel","autre","tmar","tue","par"])};
-  const bk={},copies=[],bkfiles=[];const cache={};const props={};let sleeps=0;
+  const bk={},copies=[],bkfiles=[],mails=[];const cache={};const props={};let sleeps=0;
   const ctx={console,Logger:{log(){}},
     SpreadsheetApp:{getActiveSpreadsheet:()=>({getSheetByName:n=>sheets[n],insertSheet:n=>{sheets[n]=mkSheet([]);return sheets[n];}}),openById:id=>({getSheetByName:n=>(id==='BKP'?bk[n]:sheets[n])})},
     DriveApp:{getFileById:()=>({makeCopy:n=>{copies.push(n);}}),searchFiles:()=>{let i=0;const l=bkfiles;return {hasNext:()=>i<l.length,next:()=>l[i++]};}},
+    MailApp:{sendEmail(a,b,c){mails.push({a,b,c});}},Session:{getEffectiveUser:()=>({getEmail:()=>'admin@x.org'})},
     CacheService:{getScriptCache:()=>({get:k=>cache[k]??null,put:(k,v)=>{cache[k]=v;}})},
     LockService:{getScriptLock:()=>({waitLock(){},releaseLock(){}})},
     PropertiesService:{getScriptProperties:()=>({getProperty:k=>props[k]??null,setProperty:(k,v)=>{props[k]=v;}})},
@@ -26,7 +27,7 @@ function env(){
       base64EncodeWebSafe:b=>Buffer.from(b.map(x=>x<0?x+256:x)).toString("base64url")}};
   vm.createContext(ctx);vm.runInContext(fs.readFileSync(path.resolve(__dirname,'..','serveur','Code.gs'),'utf8'),ctx);
   const call=(code,body)=>JSON.parse(ctx.doPost({postData:{contents:JSON.stringify(Object.assign({code},body))}}).s);
-  return {ctx,sheets,call,cache,bk,copies,bkfiles,mkSheet,sleeps:()=>sleeps};
+  return {ctx,sheets,call,cache,bk,copies,bkfiles,mails,mkSheet,sleeps:()=>sleeps};
 }
 const ok=(c,m)=>assert.ok(c,m);let n=0;const T=(nom,f)=>{f();n++;console.log("ok -",nom);};
 T("connexion avec code valide, refus avec code faux (et ralentissement)",()=>{const e=env();
@@ -67,11 +68,25 @@ T("une version plus récente du Sheet n'est pas écrasée",()=>{const e=env();
   e.call("AGENT-1",{action:"upsert",rows:[{uid:"c1",nom:"V2",maj:"2026-10-02T00:00:00.000Z"}]});
   const r=e.call("ADMIN-CODE-1",{action:"upsert",rows:[{uid:"c1",nom:"V1",maj:"2026-10-01T00:00:00.000Z"}]});
   assert.strictEqual(r.rows[0].nom,"V2");});
-T("limite d'essais : blocage des nouveaux codes, pas des sessions déjà validées",()=>{const e=env();
+T("limite d'essais : alerte e-mail à 30 échecs, blocage de secours à 200, sessions validées conservées",()=>{const e=env();
   e.call("AGENT-1",{action:"login"});
-  for(let i=0;i<10;i++)e.call("FAUX"+i,{action:"login"});
-  assert.strictEqual(e.call("ADMIN-CODE-1",{action:"login"}).err,"bloque");
+  for(let i=0;i<29;i++)e.call("FAUX"+i,{action:"login"});
+  assert.strictEqual(e.mails.length,0,"pas d'alerte avant 30");
+  assert.strictEqual(e.call("ADMIN-CODE-1",{action:"login"}).ok,true,"un bon code passe même après 29 échecs");
+  e.call("FAUX30",{action:"login"});assert.strictEqual(e.mails.length,1,"alerte à 30");assert.strictEqual(e.mails[0].a,"admin@x.org");
+  assert.ok(!/FAUX/.test(e.mails[0].c),"aucun code dans l'alerte");
+  for(let i=0;i<40;i++)e.call("FAUX"+i,{action:"login"});assert.strictEqual(e.mails.length,1,"au plus une alerte par heure");
+  for(let i=0;i<140;i++)e.call("FAUX"+i,{action:"login"});
+  e.sheets.Utilisateurs.d.push(["Neuf","NEUF-CODE-12345","Oui","Utilisateur"]);
+  assert.strictEqual(e.call("NEUF-CODE-12345",{action:"login"}).err,"bloque","nouveau code bloqué en secours");
   assert.strictEqual(e.call("AGENT-1",{action:"list"}).ok,true,"session déjà validée conservée");});
+T("code court : accepté avec avertissement avant la date, refusé après, code long toujours accepté",()=>{const e=env();
+  const r=e.call("AGENT-1",{action:"login"});assert.strictEqual(r.ok,true);assert.strictEqual(r.faible,true);
+  e.sheets.Utilisateurs.d.push(["Long","CODE-LONG-12345","Oui","Utilisateur"]);
+  assert.strictEqual(e.call("CODE-LONG-12345",{action:"login"}).faible,false);
+  const Real=Date;e.ctx.Date=class extends Real{constructor(...a){super(...(a.length?a:["2026-12-01T10:00:00Z"]));}};
+  assert.strictEqual(e.call("AGENT-1",{action:"login"}).err,"faible","refus après la date");
+  assert.strictEqual(e.call("CODE-LONG-12345",{action:"login"}).ok,true);});
 T("erreur interne : message générique, pas de détail",()=>{const e=env();
   const bad=JSON.parse(e.ctx.doPost({postData:{contents:"{pas du json"}}).s);assert.strictEqual(bad.err,"serveur");});
 T("historique : création, champs modifiés, rien si aucun changement",()=>{const e=env();

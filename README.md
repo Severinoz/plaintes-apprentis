@@ -63,3 +63,8 @@ Historique : chaque création ou modification d'une plainte ajoute une ligne par
 Sauvegardes : une copie du Sheet chaque jour à 5h (14 conservées). `verifierSauvegarde()` compare la dernière copie au Sheet actuel. `restaurerPlaintes()` remet l'onglet Plaintes dans l'état de la dernière copie, après avoir fait une copie « Avant restauration ».
 
 Après chaque changement de `serveur/Code.gs` : le coller dans Apps Script, puis Déployer > Gérer les déploiements > Nouvelle version. Une seule fois : `chiffrerCodes()` ; `installerSauvegarde()` à relancer après cette mise à jour (passage à une copie quotidienne).
+
+## Lot 1 (codes courts, blocage, paquets)
+- Codes : 10 caractères minimum. Un code plus court est accepté avec un avertissement jusqu'au 20/11/2026 (CODE_COURT_REFUSE_APRES dans Code.gs), refusé ensuite (réponse "faible").
+- Faux codes : chaque échec est ralenti. À 30 échecs en 10 minutes, un e-mail d'alerte est envoyé au propriétaire du script (au plus un par heure). À 200 échecs en 1 heure, les codes jamais validés récemment sont bloqués (les sessions déjà validées continuent). Lancer une fois `autoriserAlertes()` pour autoriser l'envoi d'e-mails.
+- Envoi : le site envoie les modifications par paquets de 200 lignes (réduits automatiquement si le serveur répond "lot"). Import CSV limité à 2000 lignes.

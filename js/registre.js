@@ -42,6 +42,7 @@ $("file").addEventListener("change",async e=>{
   const head=data[0].map(h=>norm(h));let add=0,skip=0;
   const idx={};COLS.forEach(c=>{const j=head.indexOf(norm(c[1]));if(j>=0)idx[c[0]]=j;});
   if(idx.nom==null){toast("Colonne « Nom et prénom » introuvable.");return;}
+  if(data.length-1>2000){toast("Fichier trop gros : 2000 lignes au maximum par import. Le découper en plusieurs fichiers.");return;}
   data.slice(1).forEach(l=>{
     if(!l.some(x=>x&&x.trim()))return;
     const o={};COLS.forEach(c=>o[c[0]]=idx[c[0]]!=null?(l[idx[c[0]]]||"").trim():"");

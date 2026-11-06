@@ -40,12 +40,21 @@ async function flush(){
   const sent=new Map(dr.map(r=>[r.uid,r.maj||""]));
   const sentC={};dc.forEach(id=>sentC[id]=JSON.stringify(contacts[id]));
   try{
-    const j=await api({action:"upsert",rows:dr,contacts:dc.map(id=>Object.assign({id},contacts[id]))});
-    (j.rows||[]).forEach(sv=>{
-      const i=rows.findIndex(x=>x.uid===sv.uid);
-      if(i>=0&&(rows[i].maj||"")===sent.get(sv.uid))rows[i]=sv;
-      SYNC.synced[sv.uid]=sv.maj||"";
-    });
+    // Envoi par paquets : le serveur refuse plus de 500 lignes d'un coup ; en cas de refus "lot" on réduit la taille.
+    let first=true;
+    for(let i=0;i<dr.length||first;){
+      const part=dr.slice(i,i+SYNC.chunk);
+      let j;
+      try{j=await api({action:"upsert",rows:part,contacts:first?dc.map(id=>Object.assign({id},contacts[id])):[]});}
+      catch(e){if(e.code==="lot"&&SYNC.chunk>10){SYNC.chunk=Math.max(10,Math.floor(SYNC.chunk/2));continue;}throw e;}
+      first=false;i+=part.length;
+      (j.rows||[]).forEach(sv=>{
+        const k=rows.findIndex(x=>x.uid===sv.uid);
+        if(k>=0&&(rows[k].maj||"")===sent.get(sv.uid))rows[k]=sv;
+        SYNC.synced[sv.uid]=sv.maj||"";
+      });
+      persistSync();
+    }
     dc.forEach(id=>{SYNC.sc[id]=sentC[id];});
     saveLocal();persistSync();SYNC.err="";
   }catch(e){
@@ -103,9 +112,10 @@ async function pull(full){
 }
 $("lgGo").onclick=async()=>{
   const c=$("lgCode").value.trim();if(!c)return;SYNC.code=c;$("lgErr").textContent="Vérification...";
-  try{await api({action:"login"});try{sessionStorage.setItem("icompete_code",c);}catch(e){}
-    $("login").hidden=true;$("lgCode").value="";await pull(true);}
-  catch(e){SYNC.code="";$("lgErr").textContent=e.code==="code"?"Code incorrect ou accès désactivé.":e.code==="bloque"?"Trop d'essais incorrects. Réessayer dans 10 minutes.":"Connexion impossible : vérifier internet.";}
+  try{const lj=await api({action:"login"});try{sessionStorage.setItem("icompete_code",c);}catch(e){}
+    $("login").hidden=true;$("lgCode").value="";await pull(true);
+    if(lj.faible)toast("Votre code est trop court (moins de 10 caractères). Demandez un nouveau code à l'administrateur avant le 20/11/2026.");}
+  catch(e){SYNC.code="";$("lgErr").textContent=e.code==="code"?"Code incorrect ou accès désactivé.":e.code==="bloque"?"Trop d'essais incorrects. Réessayer dans une heure ou prévenir l'administrateur.":e.code==="faible"?"Ce code est trop court et n'est plus accepté. Demander un nouveau code (10 caractères minimum) à l'administrateur.":"Connexion impossible : vérifier internet.";}
 };
 $("lgCode").addEventListener("keydown",e=>{if(e.key==="Enter")$("lgGo").click();});
 $("sync").onclick=()=>{if(SYNC.code)pull(true);else showLogin();};

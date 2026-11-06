@@ -5,7 +5,24 @@ var PK = ["uid","id","date","nom","ue","centre","metier","mar","tel","autre","gr
 var CK = ["id","tel","autre","maj","par"];
 var AK = ["id","nom","ue","centre","metier","mar","tel","autre","tmar","tue","par"];
 
-var MAXF = 10;
+var MAXF = 30;                       // échecs en 10 min qui déclenchent l'alerte e-mail
+var MAXH = 200;                      // échecs en 1 h : blocage de secours des nouveaux codes
+var CODE_MIN = 10;                   // longueur minimale d'un code
+var CODE_COURT_REFUSE_APRES = "2026-11-20";   // après cette date, un code plus court que CODE_MIN est refusé (réponse "faible")
+/* Alerte e-mail à l'administrateur (le propriétaire du script), au plus une par heure, sans aucune donnée personnelle. */
+function alerte_(sujet, texte) {
+  try {
+    var c = CacheService.getScriptCache();
+    if (c.get("alerte")) return;
+    c.put("alerte", "1", 3600);
+    MailApp.sendEmail(Session.getEffectiveUser().getEmail(), "[Plaintes] " + sujet, texte);
+  } catch (e) { console.error("alerte : " + String(e)); }
+}
+/* À lancer une seule fois depuis l'éditeur pour autoriser l'envoi des alertes. */
+function autoriserAlertes() {
+  MailApp.sendEmail(Session.getEffectiveUser().getEmail(), "[Plaintes] Test des alertes", "Les alertes e-mail fonctionnent.");
+  Logger.log("Message de test envoyé à " + Session.getEffectiveUser().getEmail());
+}
 function hash_(c) {
   return Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(c || "").trim().toLowerCase()));
 }
@@ -86,17 +103,24 @@ function doPost(e) {
   try {
     var req = JSON.parse(e.postData.contents);
     var cache = CacheService.getScriptCache(), hk = hash_(req.code);
-    // Anti-devinette : après MAXF essais ratés en 10 minutes, seuls les codes déjà validés récemment passent.
-    if (Number(cache.get("fails") || 0) >= MAXF && !cache.get("ok_" + hk)) return out_({ ok: false, err: "bloque" });
+    // Anti-devinette : un code valide passe toujours, un faux code est ralenti, une série d'échecs déclenche une alerte.
+    // Blocage de secours seulement après MAXH échecs en une heure (les codes déjà validés récemment passent quand même).
+    if (Number(cache.get("failsH") || 0) >= MAXH && !cache.get("ok_" + hk)) return out_({ ok: false, err: "bloque" });
     var me = auth_(req.code);
     if (!me) {
-      cache.put("fails", String(Number(cache.get("fails") || 0) + 1), 600);
-      Utilities.sleep(1000);
+      var nf = Number(cache.get("fails") || 0) + 1;
+      cache.put("fails", String(nf), 600);
+      cache.put("failsH", String(Number(cache.get("failsH") || 0) + 1), 3600);
+      if (nf === MAXF) alerte_("Tentatives de connexion répétées", nf + " codes incorrects en moins de 10 minutes. Si ce n'est pas vous ou un collègue, changez les codes dans l'onglet Administration.");
+      Utilities.sleep(Math.min(3000, 1000 + 100 * nf));
       return out_({ ok: false, err: "code" });
     }
+    // Code trop court : accepté jusqu'à la date limite avec un avertissement, refusé ensuite.
+    var faible = String(req.code || "").trim().length < CODE_MIN;
+    if (faible && new Date().toISOString().slice(0, 10) > CODE_COURT_REFUSE_APRES) return out_({ ok: false, err: "faible" });
     cache.put("ok_" + hk, "1", 21600);
     var user = me.nom;
-    if (req.action === "login") return out_({ ok: true, nom: user, role: me.role });
+    if (req.action === "login") return out_({ ok: true, nom: user, role: me.role, faible: faible });
     if (req.action === "users") return me.role === "Administrateur" ? out_({ ok: true, users: readUsers_() }) : out_({ ok: false, err: "droits" });
     if (req.action === "list") {
       var since = typeof req.since === "string" && /^\d{4}-\d{2}-\d{2}T/.test(req.since) ? req.since : "";   // synchronisation partielle : seulement ce qui a changé
@@ -105,7 +129,7 @@ function doPost(e) {
         pl = pl.filter(function (o) { return String(o.maj || "") >= since; });
         ct = ct.filter(function (o) { return String(o.maj || "") >= since; });
       }
-      return out_({ ok: true, nom: user, role: me.role, plaintes: pl, contacts: ct, n: n, partiel: !!since, apprentis: req.noApp ? undefined : readRows_("Apprentis", 10) });
+      return out_({ ok: true, nom: user, role: me.role, faible: faible, plaintes: pl, contacts: ct, n: n, partiel: !!since, apprentis: req.noApp ? undefined : readRows_("Apprentis", 10) });
     }
     if (me.role === "Lecture" && (req.action === "upsert" || req.action === "addApprenti")) return out_({ ok: false, err: "droits" });
     var lock = LockService.getScriptLock();
