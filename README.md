@@ -22,6 +22,7 @@ Le dépôt ne contient aucune donnée : la page est vide tant que l'utilisateur 
 | `serveur/Code.gs` | Script serveur à coller dans Google Apps Script |
 | `tests/charge.js` | Test de charge avec un serveur simulé |
 | `tests/securite.js` | Tests de sécurité du navigateur (XSS, déconnexion, lignes en attente, CSV, mise à jour) |
+| `tests/synchro.js` | Test de la synchronisation partielle |
 | `tests/serveur.js` | Tests de `Code.gs` avec un Google Sheet simulé |
 
 Les fichiers JavaScript sont des scripts classiques chargés dans cet ordre, qui partagent le même espace global. Il n'y a ni framework ni compilation.
@@ -32,7 +33,7 @@ Les fichiers JavaScript sont des scripts classiques chargés dans cet ordre, qui
 - Le code d'accès, les plaintes et les contacts sont gardés dans `sessionStorage` : tout disparaît à la fermeture de l'onglet et à la déconnexion. Seules les lignes pas encore envoyées sont gardées dans `localStorage`, liées à leur auteur (14 jours maximum), et ne sont renvoyées que sous son propre code.
 - Rôles : Administrateur, Utilisateur, Lecture (consultation seule, refusée aussi côté serveur).
 - Le serveur valide chaque ligne (identifiant, date, longueur des champs, horloge, auteur) et stocke les codes chiffrés (SHA-256 salé) après `chiffrerCodes()`.
-- Les plaintes modifiées sont envoyées 600 ms après la modification, avec une nouvelle tentative si le réseau échoue. La page relit le serveur toutes les 45 s.
+- Les plaintes modifiées sont envoyées 600 ms après la modification, avec une nouvelle tentative si le réseau échoue. Toutes les 45 s, la page ne demande au serveur que les plaintes modifiées depuis sa dernière lecture (`since`). Une lecture complète a lieu à la connexion, toutes les 10 minutes, et dès que le nombre de plaintes du serveur ne correspond plus.
 - La version la plus récente (horodatage `maj`) gagne en cas de conflit.
 - Tous les calculs (indicateurs, répartitions, filtres) sont faits dans le navigateur.
 
@@ -43,6 +44,7 @@ npm i playwright
 node tests/charge.js 1500
 node tests/securite.js
 node tests/serveur.js
+node tests/synchro.js 2>&1
 ```
 
 Le test de charge simule le serveur, vérifie la connexion, le nombre de plaintes, les indicateurs du tableau de bord, l'absence d'erreur JavaScript, et mesure les temps d'affichage.

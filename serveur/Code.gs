@@ -98,7 +98,15 @@ function doPost(e) {
     var user = me.nom;
     if (req.action === "login") return out_({ ok: true, nom: user, role: me.role });
     if (req.action === "users") return me.role === "Administrateur" ? out_({ ok: true, users: readUsers_() }) : out_({ ok: false, err: "droits" });
-    if (req.action === "list") return out_({ ok: true, nom: user, role: me.role, plaintes: readObjs_("Plaintes", PK), contacts: readObjs_("Contacts", CK), apprentis: req.noApp ? undefined : readRows_("Apprentis", 10) });
+    if (req.action === "list") {
+      var since = typeof req.since === "string" && /^\d{4}-\d{2}-\d{2}T/.test(req.since) ? req.since : "";   // synchronisation partielle : seulement ce qui a changé
+      var pl = readObjs_("Plaintes", PK), ct = readObjs_("Contacts", CK), n = pl.length;
+      if (since) {
+        pl = pl.filter(function (o) { return String(o.maj || "") >= since; });
+        ct = ct.filter(function (o) { return String(o.maj || "") >= since; });
+      }
+      return out_({ ok: true, nom: user, role: me.role, plaintes: pl, contacts: ct, n: n, partiel: !!since, apprentis: req.noApp ? undefined : readRows_("Apprentis", 10) });
+    }
     if (me.role === "Lecture" && (req.action === "upsert" || req.action === "addApprenti")) return out_({ ok: false, err: "droits" });
     var lock = LockService.getScriptLock();
     lock.waitLock(20000);
