@@ -3,7 +3,7 @@
 function show(v){
   if((v==="tableau"||v==="admin")&&!isAdmin())v="saisie";
   document.querySelectorAll(".view").forEach(s=>s.hidden=s.id!=="v-"+v);
-  document.querySelectorAll("#nav button").forEach(b=>b.toggleAttribute("aria-current",b.dataset.v===v));
+  document.querySelectorAll("#nav button").forEach(b=>{if(b.dataset.v===v)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current");});
   $("actions").hidden=v!=="saisie";
   if(v==="registre")renderRegistre();if(v==="tableau")renderDash();if(v==="traitement")renderTrait();if(v==="admin")renderAdmin();
   window.scrollTo({top:0});

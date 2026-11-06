@@ -158,3 +158,7 @@ dialog .row{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
 .conflit ul{margin:8px 0 8px 18px;padding:0}
 .conflit p{margin:6px 0 10px}
 .conflit button{background:#c25e00;color:#fff;border:0;border-radius:6px;padding:8px 14px;cursor:pointer;font:inherit}
+
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}

@@ -27,6 +27,8 @@ function status(){
 }
 let ft;
 function sched(){if(!SYNC.on||!SYNC.ok)return;clearTimeout(ft);ft=setTimeout(flush,600);status();}
+/* Pendant la connexion, le reste de la page n'est ni atteignable au clavier ni lu par les lecteurs d'écran. */
+new MutationObserver(()=>{const o=$("login").hidden;["top","main"].forEach(t=>{const e=document.querySelector(t==="top"?"header.top":"main");if(e)e.inert=!o;});}).observe($("login"),{attributes:true,attributeFilter:["hidden"]});
 function showLogin(msg){$("login").hidden=false;$("lgErr").textContent=msg||"";setTimeout(()=>$("lgCode").focus(),50);}
 function wipeSession(){try{Object.keys(sessionStorage).filter(k=>k.indexOf("icompete_")===0).forEach(k=>sessionStorage.removeItem(k));}catch(e){}}
 /* Accès refusé : on efface la session de l'onglet (les saisies non envoyées restent gardées au nom de leur auteur) puis on recharge. */
@@ -152,9 +154,9 @@ $("bAdd").onclick=async()=>{
 };
 const MSGU={court:"Le code doit contenir au moins 10 caractères.",code_pris:"Ce code est déjà utilisé par quelqu'un d'autre.",self:"Impossible de retirer tes propres droits d'administrateur ou ton accès.",champs:"Renseigner le nom et le code.",droits:"Réservé aux administrateurs."};
 function drawUsers(us){
-  $("uBody").innerHTML=us.map(u=>`<tr data-n="${esc(u.nom)}"><td><strong>${esc(u.nom)}</strong></td><td><input type="text" class="uc" value="${esc(u.code)}" placeholder="${u.chiffre?"Code chiffré : saisir pour le changer":""}" autocomplete="off"></td>
-    <td><select class="ur"><option ${u.role==="Utilisateur"?"selected":""}>Utilisateur</option><option ${u.role==="Administrateur"?"selected":""}>Administrateur</option><option ${u.role==="Lecture"?"selected":""}>Lecture</option></select></td>
-    <td><select class="ua"><option ${u.actif==="Oui"?"selected":""}>Oui</option><option ${u.actif==="Non"?"selected":""}>Non</option></select></td>
+  $("uBody").innerHTML=us.map(u=>`<tr data-n="${esc(u.nom)}"><td><strong>${esc(u.nom)}</strong></td><td><input type="text" class="uc" aria-label="Code d'accès de ${esc(u.nom)}" value="${esc(u.code)}" placeholder="${u.chiffre?"Code chiffré : saisir pour le changer":""}" autocomplete="off"></td>
+    <td><select class="ur" aria-label="Rôle de ${esc(u.nom)}"><option ${u.role==="Utilisateur"?"selected":""}>Utilisateur</option><option ${u.role==="Administrateur"?"selected":""}>Administrateur</option><option ${u.role==="Lecture"?"selected":""}>Lecture</option></select></td>
+    <td><select class="ua" aria-label="Actif : ${esc(u.nom)}"><option ${u.actif==="Oui"?"selected":""}>Oui</option><option ${u.actif==="Non"?"selected":""}>Non</option></select></td>
     <td class="act"><button class="btn s" data-su="1" type="button">Enregistrer</button></td></tr>`).join("")||`<tr><td colspan="5" class="empty">Aucun utilisateur.</td></tr>`;
 }
 async function renderAdmin(){

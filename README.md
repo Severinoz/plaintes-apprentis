@@ -81,3 +81,6 @@ Après chaque changement de `serveur/Code.gs` : le coller dans Apps Script, puis
 
 ## Tests automatiques (S4)
 À chaque envoi sur `main` et chaque pull request, GitHub Actions lance `npm test` (tests serveur, sécurité, synchro, charge) dans `.github/workflows/tests.yml`. Un échec apparaît en rouge dans l'onglet Actions du dépôt. En local : `npm install`, `npx playwright install chromium`, puis `npm test`.
+
+## Accessibilité (N6)
+`tests/accessibilite.js` lance axe-core (règles WCAG A et AA) sur chaque écran et vérifie au clavier : fenêtre de connexion modale (le reste de la page est désactivé), onglet actif annoncé (`aria-current="page"`), pas de défilement horizontal à 375 px. Corrigés : champs de l'écran Administration sans étiquette, en-têtes de colonne vides, contour de focus visible sur les boutons. Limite : un contrôle automatique ne remplace pas un essai avec un lecteur d'écran (non fait).

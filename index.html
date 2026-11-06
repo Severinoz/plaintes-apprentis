@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <script>
-window.APP_BUILD="20261106-6";
+window.APP_BUILD="20261106-7";
 (function(){
   function num(v){var p=String(v).split("-");return [parseInt(p[0],10)||0,parseInt(p[1],10)||0];}
   function newer(a,b){var x=num(a),y=num(b);return x[0]>y[0]||(x[0]===y[0]&&x[1]>y[1]);}
@@ -37,7 +37,7 @@ window.APP_BUILD="20261106-6";
 })();
 </script>
 <title>Gestion des plaintes des apprentis</title>
-<link rel="stylesheet" href="css/style.css?v=20261106-6">
+<link rel="stylesheet" href="css/style.css?v=20261106-7">
 </head>
 <body>
 <header class="top"><div class="top-in">
@@ -133,7 +133,7 @@ window.APP_BUILD="20261106-6";
   </div>
   <div class="note" id="regCount" style="margin:0 0 8px"></div>
   <div class="tablewrap"><table>
-    <thead><tr><th>Date</th><th>Nom et prénom</th><th>UE</th><th>Centre</th><th>Nature</th><th>Statut</th><th>Résultat</th><th></th></tr></thead>
+    <thead><tr><th>Date</th><th>Nom et prénom</th><th>UE</th><th>Centre</th><th>Nature</th><th>Statut</th><th>Résultat</th><th><span class="sr">Actions</span></th></tr></thead>
     <tbody id="regBody"></tbody>
   </table></div>
   <p class="note">Les plaintes sont enregistrées sur le serveur partagé et sauvegardées chaque jour. Exporter de temps en temps pour en garder une copie à part. Le fichier exporté s'ouvre dans Excel.</p>
@@ -159,7 +159,7 @@ window.APP_BUILD="20261106-6";
 <section class="view" id="v-admin" hidden>
   <h1>Administration</h1>
   <div class="card"><h2>Utilisateurs</h2>
-    <div class="tablewrap"><table><thead><tr><th>Nom</th><th>Code d'accès</th><th>Rôle</th><th>Actif</th><th></th></tr></thead><tbody id="uBody"></tbody></table></div>
+    <div class="tablewrap"><table><thead><tr><th>Nom</th><th>Code d'accès</th><th>Rôle</th><th>Actif</th><th><span class="sr">Actions</span></th></tr></thead><tbody id="uBody"></tbody></table></div>
     <h2 style="margin-top:18px">Ajouter un utilisateur</h2>
     <div class="tools">
       <div><label class="f" for="uNom">Nom</label><input type="text" id="uNom" autocomplete="off"></div>
@@ -185,21 +185,21 @@ window.APP_BUILD="20261106-6";
   <button class="btn d" id="bCancel" hidden>Annuler la plainte</button>
 </div></div>
 
-<div id="login" class="loginov" hidden><div class="card"><h2>Connexion</h2>
+<div id="login" class="loginov" hidden role="dialog" aria-modal="true" aria-labelledby="lgTitre"><div class="card"><h2 id="lgTitre">Connexion</h2>
   <p class="muted" style="margin:0">Saisir votre code d'accès personnel pour ouvrir la base partagée des plaintes.</p>
   <input type="password" id="lgCode" autocomplete="off" placeholder="Code d'accès"><div id="lgErr"></div>
   <button class="btn p" id="lgGo" type="button">Se connecter</button></div></div>
 <datalist id="dlCentres"></datalist><datalist id="dlMetiers"></datalist>
 <dialog id="dlg"><p id="dlgMsg"></p><div class="row" id="dlgBtns"></div></dialog>
 
-<script src="js/config.js?v=20261106-6"></script>
-<script src="js/donnees.js?v=20261106-6"></script>
-<script src="js/formulaire.js?v=20261106-6"></script>
-<script src="js/enregistrement.js?v=20261106-6"></script>
-<script src="js/registre.js?v=20261106-6"></script>
-<script src="js/tableau.js?v=20261106-6"></script>
-<script src="js/traitement.js?v=20261106-6"></script>
-<script src="js/navigation.js?v=20261106-6"></script>
-<script src="js/sync.js?v=20261106-6"></script>
+<script src="js/config.js?v=20261106-7"></script>
+<script src="js/donnees.js?v=20261106-7"></script>
+<script src="js/formulaire.js?v=20261106-7"></script>
+<script src="js/enregistrement.js?v=20261106-7"></script>
+<script src="js/registre.js?v=20261106-7"></script>
+<script src="js/tableau.js?v=20261106-7"></script>
+<script src="js/traitement.js?v=20261106-7"></script>
+<script src="js/navigation.js?v=20261106-7"></script>
+<script src="js/sync.js?v=20261106-7"></script>
 </body>
 </html>

@@ -7,7 +7,11 @@
     "test:securite": "node tests/securite.js",
     "test:synchro": "node tests/synchro.js",
     "test:charge": "node tests/charge.js",
-    "test": "npm run test:serveur && npm run test:securite && npm run test:synchro && npm run test:charge"
+    "test": "npm run test:serveur && npm run test:securite && npm run test:synchro && npm run test:accessibilite && npm run test:charge",
+    "test:accessibilite": "node tests/accessibilite.js"
   },
-  "devDependencies": { "playwright": "1.56.0" }
+  "devDependencies": {
+    "axe-core": "^4.10.2",
+    "playwright": "1.56.0"
+  }
 }
